@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            color: black;
+        }
+        .inputs {
+            position: absolute;
+            top: 0;
+            display: none;
+        }
+        .tip {
+            position: absolute;
+            top:50%;
+            left:50%;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas class="canvas">
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <div id="inputs" class="inputs">
+        <button onclick="toggleBalls()">Balls/Line</button></br>
+        <button onclick="addPoints(-10)" style="margin-top: 10px;">-10</button>
+        <button onclick="addPoints(-1)">-</button>
+        <text id="points"></text>
+        <button onclick="addPoints(+1)">+</button>
+        <button onclick="addPoints(+10)">+10</button></br>
+        <button onclick="swapAxis()" style="margin-top: 10px;">Swap axis</button></br>
+        <button onclick="removeMarker(-1)" style="margin-top: 10px;">-1</button>
+        <button onclick="toggleMarker()">Marker</button>
+        <button onclick="addMarker(1)">+1</button>
+        <button onclick="toggleAutoMarker()">Auto marker toggle</button>
+        <div style="margin-top: 10px;">
+            <div>Wave speed</div>
+            <div class="slidecontainer">
+                <input type="range" min="0" max="100" value="20" id="speed-slider">
+            </div>
+            <div>Wave period</div>
+            <div class="slidecontainer">
+                <input type="range" min="1" max="100" value="50" id="period-slider">
+            </div>
+            <div>Color speed</div>
+            <div class="slidecontainer">
+                <input type="range" min="1" max="100" value="50" id="color-slider">
+            </div>
+            <div>Marker size</div>
+            <div class="slidecontainer">
+                <input type="range" min="1" max="200" value="50" id="marker-size-slider">
+            </div>
+        </div>
+    </div>
+    <p class="tip" id="tip">
+        Click on background to hide/show controls
+    </p>
+    <script>
+        const canvas = document.querySelector('.canvas');
+        const pointsLbl = document.getElementById('points');
+        const inputs = document.getElementById("inputs")
+        const speedSlider = document.getElementById("speed-slider")
+        const periodSlider = document.getElementById("period-slider")
+        const colorSlider = document.getElementById("color-slider")
+        const markerSizeSlider = document.getElementById("marker-size-slider")
+        const tip = document.getElementById("tip")
+        const width = canvas.width = window.innerWidth;
+        const height = canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        
+        const goalFps = 120
+
+        let paintWBalls = true
+        let horizontal = true
+        
+        let points = 10
+        let speedBooster = 1
+        let periodDivider = 2
+        let colorSpeed = 0.5
+
+
+        let markers = [{x: 0, y: 0, xDir: 0, yDir: 0}]
+        let cursor = {x: 0, y: 0}
+        let paintMarker = true
+        let markerAcc = 0.1
+        let resistance = 0.02
+        let markerSize = 100
+        let autoMarker = true
+        let cursorTarget = {x: 0, y: 0}
+        autoMarkerSpeed = 20
+
+        canvas.addEventListener('click', () => {
+            tip.style.display = "none"
+            if (inputs.style.display === "none")
+                inputs.style.display = "block";
+            else
+                inputs.style.display = "none";
+        })
+        let lastMouseEvent = 0
+        canvas.addEventListener('mousemove', (evt) => {
+            const now = new Date()
+            if(!autoMarker && now - lastMouseEvent > 1000/goalFps){
+                cursor.x = evt.clientX
+                cursor.y = evt.clientY
+                lastMouseEvent = now
+            }
+        })
+
+        const toggleBalls = () => paintWBalls = !paintWBalls
+        const toggleMarker = () => paintMarker = !paintMarker
+        const toggleAutoMarker = () => autoMarker = !autoMarker
+        const addPoints = (n) => {
+            if(points + n > 0)
+                points += n
+            pointsLbl.innerHTML = `Points ${points}`
+        }
+        const removeMarker = () => markers.length > 1 && markers.shift()
+        const addMarker = () => markers.push({ x: 0, y: 0, xDir: 0, yDir: 0 })
+
+        const swapAxis = () => horizontal = !horizontal
+        speedSlider.oninput = () => speedBooster = speedSlider.value/20
+        periodSlider.oninput = () => periodDivider = periodSlider.value/30
+        colorSlider.oninput = () => colorSpeed = colorSlider.value/30
+        markerSizeSlider.oninput = () => markerSize = markerSizeSlider.value
+        
+        const  fillCirc = (x, y, r, context) => {
+            context.beginPath()
+            context.arc(x, y, r, 2 * Math.PI, false)
+            context.fill()
+        }
+
+        const toRad = (deg) => Math.PI * deg / 180
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        var colors = [
+            {val: Math.random()*255, dir: 1, min: 0, max: 255},
+            {val: Math.random() * 255, dir: 1, min: 0, max: 255},
+            {val: Math.random() * 255, dir: 1, min: 0, max: 255},
+        ]
+        var t = 1
+        
+        
+        function play(){
+            const speed = speedBooster * 1000/(goalFps*10)
+            ctx.fillStyle = `rgb(${colors[0].val},${colors[1].val},${colors[2].val})`;
+            ctx.strokeStyle = `rgb(${colors[0].val},${colors[1].val},${colors[2].val})`;
+            let getX = undefined
+            let getY = undefined
+
+            if(horizontal){
+                d = Math.ceil(width / points)
+                getY = (i, t) => height / 2 + Math.sin(toRad(t) + (Math.PI * i / points / periodDivider)) * height / 2
+                getX = (i, t) => d * i + d / 2
+            } else  {
+                d = Math.ceil(height / points)
+                getX = (i, t) => width / 2 + Math.sin(toRad(t) + (Math.PI * i / points / periodDivider)) * width / 2
+                getY = (i, t) => d * i + d / 2
+            }
+
+
+            if(paintWBalls){
+                ctx.beginPath()
+                ctx.lineWidth = d
+                ctx.lineCap = 'round'
+                const prevTick = t-1*speed
+                for (let i = 0; i < points; i++) {
+                    ctx.moveTo(getX(i, prevTick), getY(i, prevTick))
+                    ctx.lineTo(getX(i, t), getY(i, t))
+                }
+                ctx.stroke()
+            } else {
+                ctx.lineWidth = 10
+                ctx.beginPath()
+                ctx.lineCap = 'round'
+                for (let i = -1; i < points + 1; i++) {
+                    ctx.lineTo(getX(i, t), getY(i, t))
+                }
+                ctx.stroke()
+            }
+
+            if(paintMarker){
+                if(autoMarker){
+                    let dist = Math.sqrt((cursorTarget.x - cursor.x)**2, (cursorTarget.y - cursor.y) ** 2)
+                    if(dist < 10){
+                        cursorTarget.x = Math.random() * width
+                        cursorTarget.y = Math.random() * height
+                    }
+                    cursor.x += 1 * Math.sign(cursorTarget.x - cursor.x) * autoMarkerSpeed
+                    cursor.y += 1 * Math.sign(cursorTarget.y - cursor.y) * autoMarkerSpeed
+                }
+                markers.forEach((marker,i) => {
+                    ctx.beginPath()
+                    ctx.lineWidth = markerSize
+                    ctx.moveTo(marker.x, marker.y)
+
+                    let a = Math.atan2(cursor.y - marker.y, cursor.x - marker.x);
+                    let dist = Math.sqrt((cursor.y - marker.y)**2, (cursor.x - marker.x)**2);
+                    let yAcc = Math.sin(a) * markerAcc * (1000 / goalFps)
+                    let xAcc = Math.cos(a) * markerAcc * (1000 / goalFps)
+                    marker.xDir += xAcc * (1 - (0.5 / markers.length) * i)
+                    marker.yDir += yAcc * (1 - (0.5 / markers.length) * i)
+                    marker.xDir *= 1 - resistance
+                    marker.yDir *= 1 - resistance
+                    marker.x += marker.xDir
+                    marker.y += marker.yDir
+                    ctx.lineTo(marker.x, marker.y)
+                    ctx.stroke()
+                });
+            }
+
+            colors.forEach(col => {
+                if(col.val <= col.min)
+                    col.dir = Math.random() * 0.8 + 0.2  
+                if(col.val >= col.max)
+                    col.dir = - (Math.random() * 0.8 + 0.2)  
+                col.val += col.dir * colorSpeed
+            });
+            t += 1*speed
+            setTimeout(play, 1000/goalFps)
+        }
+        addPoints(0)
+        play()
+        setTimeout(() => tip.style.display = "block", 5000)
+    </script>
+</body>
+
+</html>
