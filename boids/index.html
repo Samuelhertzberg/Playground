@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boids</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas class="canvas">
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <script>
+        const canvas = document.querySelector('.canvas');
+        const width = canvas.width = window.innerWidth;
+        const height = canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        
+        const noBoids = 500
+        const coherenceLookoutDist = 100
+        const collisionLookoutDist = 15
+        const velocityLookoutDist = 20
+        const boundsLookoutDist = -20
+        const coherenceScaling = 1
+        const collisionScaling = 3
+        const velocityScaling = 2
+        const localDist = 100
+        const steeringForce = Math.PI*2/200 //Radians per click
+        const boidSpeed = 1
+        
+        let boids = []
+        const rand = (h=1, l=0) => l + Math.random() * (h - l)
+        for (let i = 0; i < noBoids; i++) {
+            boids.push({ x: rand(width), y: rand(height), xDir: rand(1, -1), yDir: rand(1, -1) })
+        }
+        boids.push({ x: 500, y: 400, xDir: -1, yDir: 0 })
+        boids.push({ x: 500, y: 420, xDir: -1, yDir: 0 })
+
+        const getDist = (vec) => Math.sqrt(vec[0] ** 2 + vec[1] ** 2)
+
+        const getVec = (boid1, boid2) => [boid2.x - boid1.x, boid2.y - boid1.y]
+
+        const getAngle = (vec) => Math.atan2(vec[1], vec[0])
+
+        const getVecPoints = (p1, p2) => [p2[0] - p1[0], p2[1] - p1[1]]
+
+        const normalize = vec => {
+            const d = getDist(vec)
+            return d > 0 ? scaleVec(vec, 1/d) : [0, 0]
+        }
+
+        const scaleVec = (vec, scale) => {
+            return [vec[0] * scale, vec[1] * scale]
+        }
+
+        const updateBoids = () => {
+            boids = boids.map(boid => {
+                let newDir = [0,0]
+                const cohVec = getCoheranceVector(boid)
+                newDir[0] += cohVec[0] * coherenceScaling
+                newDir[1] += cohVec[1] * coherenceScaling
+                const colVec = getAntiCollideVector(boid)
+                newDir[0] += colVec[0] * collisionScaling
+                newDir[1] += colVec[1] * collisionScaling
+                const velVec = getMatchVelocityVector(boid)
+                newDir[0] += velVec[0] * velocityScaling
+                newDir[1] += velVec[1] * velocityScaling
+                const boundvec = getBoundsVector(boid)
+                newDir[0] += boundvec[0]
+                newDir[1] += boundvec[1]
+                newDir = scaleVec(getBoidVec(boid, newDir), boidSpeed)
+                return {x: boid.x, y: boid.y, xDir: newDir[0], yDir: newDir[1]}
+            })
+        }
+
+        const getCoheranceVector = (boid) => {
+            const n = getBoidNeighbours(boid, coherenceLookoutDist)
+            if(n.length <= 0)
+                return [boid.xDir, boid.yDir]
+            const cohTgt = getCoherenceTarget(boid, n)
+            const cohVec = getVecPoints([boid.x, boid.y], cohTgt)
+            return normalize(cohVec)
+        }
+
+        const getCoherenceTarget = (b1, n) => {
+            let sumX = 0
+            let sumY = 0
+            n.forEach(b2 => {
+                sumX += b2.x
+                sumY += b2.y
+            });
+            sumX = sumX/(n.length)
+            sumY = sumY/(n.length)
+            return [sumX, sumY]
+        }
+
+        const getAntiCollideVector = (boid) => {
+            const n = getBoidNeighbours(boid, collisionLookoutDist)
+            let vec = [0, 0]
+            n.forEach(b2 => {
+                let diff = [b2.x - boid.x, b2.y - boid.y]
+                diff = scaleVec(diff, collisionLookoutDist/getDist(diff))
+                vec[0] -= diff[0]
+                vec[1] -= diff[1]
+            });
+            return normalize(vec)
+        }
+
+        const getMatchVelocityVector = (boid) => {
+            const n = getBoidNeighbours(boid, velocityLookoutDist)
+            let vec = [0, 0]
+            n.forEach(b2 => {
+                vec[0] += b2.xDir
+                vec[1] += b2.yDir
+            });
+            return normalize(vec)
+        }
+
+        const getBoundsVector = (boid) => {
+            let vec = [0,0]
+            if(boid.x < boundsLookoutDist)
+                vec[0] = 100
+            if(boid.x > (width - boundsLookoutDist))
+                vec[0] = -100
+            if(boid.y < boundsLookoutDist)
+                vec[1] = 100
+            if(boid.y > (height - boundsLookoutDist))
+                vec[1] = -100
+            return vec
+        }
+
+        const getBoidNeighbours = (boid, distLimit) => {
+            const n = []
+            boids.forEach(b => {
+                const dist = getDist(getVec(boid, b))
+                if(dist < distLimit && b != boid)
+                    n.push(b)
+            });
+            return n
+        }
+
+        const getBoidVec = (boid, tgtVec) => {
+            const boidA = getAngle([boid.xDir, boid.yDir])
+            let newAngle = boidA
+            const tgtA = getAngle(tgtVec)
+            let diff = tgtA - boidA;
+            let toSteer = steeringForce
+            if(Math.abs(diff) < steeringForce)
+                toSteer = Math.abs(diff)
+            if (diff < 0)
+                diff += 2*Math.PI;
+            if (diff > Math.PI){
+                newAngle -= steeringForce
+            }
+            else{
+                newAngle += steeringForce
+            }
+            return [Math.cos(newAngle), Math.sin(newAngle)]
+        }
+
+        const moveBoids = () => {
+            boids.forEach(boid => {
+                boid.x = boid.x + boid.xDir
+                boid.y = boid.y + boid.yDir
+            });
+        }
+        
+        const draw = () => {
+            ctx.fillStyle = `rgb(0,0,0)`;
+            ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = `rgb(255,255,255)`;
+            ctx.strokeStyle = `rgb(255,255,255)`;
+            ctx.lineWidth = 5
+            ctx.lineCap = "round"
+            ctx.beginPath()
+            boids.forEach((boid, i) => {
+                ctx.moveTo(boid.x, boid.y)
+                ctx.lineTo(boid.x + boid.xDir * 5, boid.y + boid.yDir * 5)
+            });
+            ctx.stroke()
+        }
+        // updateBoids()
+        // moveBoids()
+        // draw()
+        async function step(){
+            updateBoids()
+            moveBoids()
+            draw()  
+            window.requestAnimationFrame(step)
+        }
+        window.requestAnimationFrame(step)
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+
+</html>
