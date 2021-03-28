@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System seeder</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas class="canvas">
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <script>
+        const canvas = document.querySelector('.canvas');
+        const width = canvas.width = window.innerWidth;
+        const height = canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+
+        //Constants
+        const G = 6.674 * 10 **-11
+        const tickLength = 60
+        const gravityBoost = 300000
+
+        //Collections
+        const bodies = [
+            // { x: 200, y: 200, xDir: 0, yDir: 0, m: 1000, r: 10, color:'rgb(255,255,255)'},
+            // { x: 300, y: 200, xDir: 0, yDir: 0, m: 1000, r: 10, color:'rgb(255,255,255)'},
+            // { x: 400, y: 400, xDir: 0, yDir: 0, m: 1000, r: 10, color:'rgb(255,255,255)'},
+        ]
+
+        
+        
+        const getLength = (vec) => Math.sqrt(vec[0] ** 2 + vec[1] ** 2)
+        
+        const getVec = (b1, b2) => [(b1.x - b2.x), (b1.y - b2.y)]
+        
+        const scaleVector = (vec, scale) => [vec[0] * scale, vec[1] * scale]
+        
+        const getAngle = (vec) => Math.atan2(vec[1], vec[0])
+
+        for (let i = 0; i < 1000; i++) {
+            let maxR = width < height ? width : height
+            let randAngle = Math.random()*2*Math.PI
+            let r = maxR * Math.sqrt(Math.random())
+            let x = Math.cos(randAngle) * r + width/2
+            let y = Math.sin(randAngle) * r + height/2
+            let a = getAngle([width/2 - x, height/2 - y])
+            a = a - Math.PI/2
+            bodies.push({ 
+                x: x,
+                y: y,
+                xDir: 0,
+                yDir: 0,
+                // xDir: Math.cos(a) * 0.8,
+                // yDir: Math.sin(a) * 0.8,
+                m: 500 + Math.random()*5000,
+                r: 1,
+                color: 'rgb(255,255,255)'
+            })
+        }
+
+        const getMassCenter = (b1, b2) => {
+            let c = scaleVector(getVec(b2, b1), (b2.m/(b1.m+b2.m)))
+            return [b1.x + c[0], b1.y + c[1]]
+        }
+
+        const getGravityVector = (b1) => {
+            let forceVector = [0, 0]
+            bodies.forEach(b2 => {
+                if (b1 !== b2){
+                    let vec = getVec(b1, b2)
+                    let r = getLength(vec)
+                    let f = (G * (b1.m * b2.m) / r ** 2) * gravityBoost
+                    let a = getAngle(vec)
+                    forceVector[0] += Math.cos(a)*f
+                    forceVector[1] += Math.sin(a)*f
+                }
+            });
+            return forceVector
+        }
+
+        const moveBodies = () => {
+            let xDirSum = 0
+            let yDirSum = 0
+            bodies.forEach((body, i) => {
+                bodies[i] = {...body, x: body.x + body.xDir, y: body.y + body.yDir}
+            });
+        }
+
+        const updateBodies = () => {
+            bodies.forEach((body, i) => {
+                let f = getGravityVector(body)
+                f = scaleVector(f, -1)
+                let ax = f[0] / body.m
+                let ay = f[1]/ body.m
+                let dvx = ax *= tickLength
+                let dvy = ay *= tickLength
+                bodies[i] = {...body, xDir: body.xDir + dvx, yDir: body.yDir + dvy}
+            });
+        }
+
+        const checkCollisions = () => {
+            let collisions = []
+            bodies.forEach(b1 => {
+                bodies.forEach(b2 => {
+                    let vec = getVec(b1, b2)
+                    if(b1 !== b2 && getLength(vec) < (b1.r + b2.r)){
+                        collisions = addCollision(collisions, b1, b2)
+                    }
+                });
+            });
+            return collisions
+        }
+
+        const addCollision = (collisions, b1, b2) => {
+            for (let i = 0; i < collisions.length; i++) {
+                if (collisions[i].has(b1) || collisions[i].has(b2)) {
+                    collisions[i].add(b1)
+                    collisions[i].add(b2)
+                    return collisions
+                }
+            }
+            let newCol = new Set()
+            newCol.add(b1)
+            newCol.add(b2)
+            collisions.push(newCol)
+            return collisions
+        }
+
+        const performCollisions = (collisions) => {
+            let tempBodies = []
+            collisions.forEach(collision => {
+                let newBody = Array.from(collision).reduce((acc, body) => performCollision(acc, body))
+                tempBodies.push(newBody)
+                collision.forEach(body => {
+                    bodies.splice(bodies.indexOf(body), 1)
+                });
+                bodies.push(newBody)
+            });
+        }
+
+        const performCollision = (b1, b2) => {
+            let newM = b1.m + b2.m
+            let newPos = getMassCenter(b1, b2)
+            let newxDir = (b1.m*b1.xDir + b2.m * b2.xDir)/newM
+            let newyDir = (b1.m*b1.yDir + b2.m * b2.yDir)/newM
+            let newR = Math.sqrt(b1.r ** 2 + b2.r ** 2)
+            let newColor = "rgb(255,255,255)" //TODO
+            let newBody = { x: newPos[0], y: newPos[1], xDir: newxDir, yDir: newyDir, r: newR, color: newColor, m: newM}
+            return newBody
+        }
+
+        const draw = () => {
+            ctx.fillStyle = `rgb(0,0,0)`;
+            ctx.fillRect(0, 0, width, height);
+            bodies.forEach(body => {
+                ctx.beginPath()
+                ctx.fillStyle = body.color
+                ctx.strokeStyle = body.color
+                ctx.arc(body.x, body.y, body.r, 0, 2 * Math.PI)
+                ctx.fill()
+            });
+        }
+
+        // updateBodies()
+        // moveBodies()
+        // performCollisions(checkCollisions())
+        // draw()
+        async function step() {
+            updateBodies()
+            moveBodies()
+            performCollisions(checkCollisions())
+            draw()
+            window.requestAnimationFrame(step)
+        }
+        window.requestAnimationFrame(step)
+        async function step() {
+            updateBodies()
+            moveBodies()
+            performCollisions(checkCollisions())
+            draw()
+            window.requestAnimationFrame(step)
+        }
+        window.requestAnimationFrame(step)
+
+    </script>
+</body>
+
+</html>
