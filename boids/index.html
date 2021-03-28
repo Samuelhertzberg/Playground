@@ -22,6 +22,8 @@
         const canvas = document.querySelector('.canvas');
         const width = canvas.width = window.innerWidth;
         const height = canvas.height = window.innerHeight;
+        var lastMouseEvent = new Date()
+        const cursor = {x: 0, y: 0}
         const ctx = canvas.getContext('2d');
         
         const noBoids = 500
@@ -29,14 +31,16 @@
         const collisionLookoutDist = 15
         const velocityLookoutDist = 30
         const boundsLookoutDist = 20
+        const cursorLookoutDist = 50
         const coherenceScaling = 1
         const collisionScaling = 3
         const velocityScaling = 3
+        const cursorScaling = 10
         const localDist = 100
         const steeringForce = Math.PI*2/50 //Radians per click
         const boidSpeed = 2
 
-        const colorSpeed = 10
+        const colorSpeed = 2
         const trailLength = 5
         
         let colors = [
@@ -98,9 +102,12 @@
                 const velVec = getMatchVelocityVector(boid)
                 newDir[0] += velVec[0] * velocityScaling
                 newDir[1] += velVec[1] * velocityScaling
-                const boundvec = getBoundsVector(boid)
-                newDir[0] += boundvec[0]
-                newDir[1] += boundvec[1]
+                const boundVec = getBoundsVector(boid)
+                newDir[0] += boundVec[0]
+                newDir[1] += boundVec[1]
+                const mouseVec = getMouseVector(boid)
+                newDir[0] += mouseVec[0]
+                newDir[1] += mouseVec[1]
                 if(newDir === [0,0])
                     newDir = [boid.xDir, boid.yDir]
                 newDir = scaleVec(getBoidVec(boid, newDir), boidSpeed)
@@ -166,6 +173,15 @@
             if(boid.y > (height - boundsLookoutDist))
                 vec[1] = scaleValue(boid.y, height - boundsLookoutDist, height, 0, -100)
             return vec
+        }
+
+        const getMouseVector = (boid) => {
+            let vec = getVec(boid, cursor)
+            let d = getDist(getVec(boid, cursor))
+            if(d > cursorLookoutDist)
+                return [0, 0]
+            d = scaleValue(d, 0, cursorLookoutDist, -cursorScaling*5, 0)
+            return scaleVec(normalize(vec), d)
         }
 
         const getBoidNeighbours = (boid, distLimit) => {
@@ -235,8 +251,8 @@
                     col.value = 255
                     col.dir = Math.random() * colorSpeed * -1
                 }
-                if(col.value < 0){
-                    col.value = 0
+                if(col.value < 100){
+                    col.value = 100
                     col.dir = Math.random() * colorSpeed
                 }
             });
@@ -256,6 +272,15 @@
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
+
+        canvas.addEventListener('mousemove', (evt) => {
+            const now = new Date()
+            if (now - lastMouseEvent > 100) {
+                cursor.x = evt.clientX
+                cursor.y = evt.clientY
+                lastMouseEvent = now
+            }
+        })
     </script>
 </body>
 
