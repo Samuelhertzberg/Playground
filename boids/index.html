@@ -27,16 +27,17 @@
         const noBoids = 500
         const coherenceLookoutDist = 100
         const collisionLookoutDist = 15
-        const velocityLookoutDist = 20
+        const velocityLookoutDist = 30
         const boundsLookoutDist = 20
         const coherenceScaling = 1
         const collisionScaling = 3
         const velocityScaling = 3
         const localDist = 100
-        const steeringForce = Math.PI*2/200 //Radians per click
-        const boidSpeed = 1
+        const steeringForce = Math.PI*2/50 //Radians per click
+        const boidSpeed = 2
 
-        const colorSpeed = 1
+        const colorSpeed = 10
+        const trailLength = 5
         
         let colors = [
             {value: Math.random()*255, dir: Math.random()*colorSpeed},
@@ -45,6 +46,8 @@
         ]
 
         let boids = []
+        let curveSlices = []
+
         const rand = (h=1, l=0) => l + Math.random() * (h - l)
         for (let i = 0; i < noBoids; i++) {
             boids.push({ x: rand(width), y: rand(height), xDir: rand(1, -1), yDir: rand(1, -1) })
@@ -195,25 +198,33 @@
         }
 
         const moveBoids = () => {
-            boids.forEach(boid => {
+            const paths = []
+            boids.forEach((boid, i) => {
+                paths.push([boid.x, boid.y, boid.x + boid.xDir, boid.y + boid.yDir])
                 boid.x = boid.x + boid.xDir
                 boid.y = boid.y + boid.yDir
             });
+            curveSlices.push({color: `rgb(${colors[0].value},${colors[1].value},${colors[2].value})`, paths: paths})
+            while(curveSlices.length > trailLength){
+                curveSlices.shift()
+            }
         }
         
         const draw = () => {
             ctx.fillStyle = `rgb(0,0,0)`;
             ctx.fillRect(0, 0, width, height);
-            ctx.fillStyle = `rgb(${colors[0].value},${colors[1].value},${colors[2].value})`;
-            ctx.strokeStyle = `rgb(${colors[0].value},${colors[1].value},${colors[2].value})`;
             ctx.lineWidth = 5
             ctx.lineCap = "round"
-            ctx.beginPath()
-            boids.forEach((boid, i) => {
-                ctx.moveTo(boid.x, boid.y)
-                ctx.lineTo(boid.x + boid.xDir * 5, boid.y + boid.yDir * 5)
+            curveSlices.forEach(slice => {
+                ctx.fillStyle = slice.color;
+                ctx.strokeStyle = slice.color;
+                ctx.beginPath()
+                slice.paths.forEach(trailSegment => {
+                    ctx.moveTo(trailSegment[0], trailSegment[1])
+                    ctx.lineTo(trailSegment[2], trailSegment[3])
+                });
+                ctx.stroke()
             });
-            ctx.stroke()
             updateColors()
         }
 
@@ -230,13 +241,14 @@
                 }
             });
         }
+
         // updateBoids()
         // moveBoids()
         // draw()
         async function step(){
             updateBoids()
             moveBoids()
-            draw()  
+            draw()
             window.requestAnimationFrame(step)
         }
         window.requestAnimationFrame(step)
