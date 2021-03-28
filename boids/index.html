@@ -28,21 +28,27 @@
         const coherenceLookoutDist = 100
         const collisionLookoutDist = 15
         const velocityLookoutDist = 20
-        const boundsLookoutDist = -20
+        const boundsLookoutDist = 20
         const coherenceScaling = 1
         const collisionScaling = 3
-        const velocityScaling = 2
+        const velocityScaling = 3
         const localDist = 100
         const steeringForce = Math.PI*2/200 //Radians per click
         const boidSpeed = 1
+
+        const colorSpeed = 1
         
+        let colors = [
+            {value: Math.random()*255, dir: Math.random()*colorSpeed},
+            {value: Math.random()*255, dir: Math.random()*colorSpeed},
+            {value: Math.random()*255, dir: Math.random()*colorSpeed}
+        ]
+
         let boids = []
         const rand = (h=1, l=0) => l + Math.random() * (h - l)
         for (let i = 0; i < noBoids; i++) {
             boids.push({ x: rand(width), y: rand(height), xDir: rand(1, -1), yDir: rand(1, -1) })
         }
-        boids.push({ x: 500, y: 400, xDir: -1, yDir: 0 })
-        boids.push({ x: 500, y: 420, xDir: -1, yDir: 0 })
 
         const getDist = (vec) => Math.sqrt(vec[0] ** 2 + vec[1] ** 2)
 
@@ -61,6 +67,22 @@
             return [vec[0] * scale, vec[1] * scale]
         }
 
+        const scaleValue = (val, min, max, tgtMin, tgtMax) => {
+            val = boundValue(val, min, max)
+            val -= min
+            val = val/(max-min)
+            if(tgtMin !== undefined && tgtMax !== undefined){
+                return (tgtMax - tgtMin) * val + tgtMin
+            }
+            return val
+        }
+
+        const boundValue = (val, min, max) => {
+            val = val < min ? min : val
+            val = val > max ? max : val
+            return val
+        }
+
         const updateBoids = () => {
             boids = boids.map(boid => {
                 let newDir = [0,0]
@@ -76,6 +98,8 @@
                 const boundvec = getBoundsVector(boid)
                 newDir[0] += boundvec[0]
                 newDir[1] += boundvec[1]
+                if(newDir === [0,0])
+                    newDir = [boid.xDir, boid.yDir]
                 newDir = scaleVec(getBoidVec(boid, newDir), boidSpeed)
                 return {x: boid.x, y: boid.y, xDir: newDir[0], yDir: newDir[1]}
             })
@@ -83,8 +107,8 @@
 
         const getCoheranceVector = (boid) => {
             const n = getBoidNeighbours(boid, coherenceLookoutDist)
-            if(n.length <= 0)
-                return [boid.xDir, boid.yDir]
+            if (n.length <= 0)
+                return [0, 0]
             const cohTgt = getCoherenceTarget(boid, n)
             const cohVec = getVecPoints([boid.x, boid.y], cohTgt)
             return normalize(cohVec)
@@ -104,6 +128,8 @@
 
         const getAntiCollideVector = (boid) => {
             const n = getBoidNeighbours(boid, collisionLookoutDist)
+            if(n.length <= 0 )
+                return [0,0]
             let vec = [0, 0]
             n.forEach(b2 => {
                 let diff = [b2.x - boid.x, b2.y - boid.y]
@@ -116,6 +142,8 @@
 
         const getMatchVelocityVector = (boid) => {
             const n = getBoidNeighbours(boid, velocityLookoutDist)
+            if (n.length <= 0)
+                return [0, 0]
             let vec = [0, 0]
             n.forEach(b2 => {
                 vec[0] += b2.xDir
@@ -127,13 +155,13 @@
         const getBoundsVector = (boid) => {
             let vec = [0,0]
             if(boid.x < boundsLookoutDist)
-                vec[0] = 100
+                vec[0] = scaleValue(boid.x, 0, boundsLookoutDist, 100, 0)
             if(boid.x > (width - boundsLookoutDist))
-                vec[0] = -100
+                vec[0] = scaleValue(boid.x, width - boundsLookoutDist, width, 0, -100)
             if(boid.y < boundsLookoutDist)
-                vec[1] = 100
+                vec[1] = scaleValue(boid.y, 0, boundsLookoutDist, 100, 0)
             if(boid.y > (height - boundsLookoutDist))
-                vec[1] = -100
+                vec[1] = scaleValue(boid.y, height - boundsLookoutDist, height, 0, -100)
             return vec
         }
 
@@ -176,8 +204,8 @@
         const draw = () => {
             ctx.fillStyle = `rgb(0,0,0)`;
             ctx.fillRect(0, 0, width, height);
-            ctx.fillStyle = `rgb(255,255,255)`;
-            ctx.strokeStyle = `rgb(255,255,255)`;
+            ctx.fillStyle = `rgb(${colors[0].value},${colors[1].value},${colors[2].value})`;
+            ctx.strokeStyle = `rgb(${colors[0].value},${colors[1].value},${colors[2].value})`;
             ctx.lineWidth = 5
             ctx.lineCap = "round"
             ctx.beginPath()
@@ -186,6 +214,21 @@
                 ctx.lineTo(boid.x + boid.xDir * 5, boid.y + boid.yDir * 5)
             });
             ctx.stroke()
+            updateColors()
+        }
+
+        const updateColors = () => {
+            colors.forEach((col, i) => {
+                col.value += col.dir
+                if(col.value > 255){
+                    col.value = 255
+                    col.dir = Math.random() * colorSpeed * -1
+                }
+                if(col.value < 0){
+                    col.value = 0
+                    col.dir = Math.random() * colorSpeed
+                }
+            });
         }
         // updateBoids()
         // moveBoids()
