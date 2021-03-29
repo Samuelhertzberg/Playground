@@ -26,27 +26,42 @@
 
         //Constants
         const G = 6.674 * 10 **-11
-        const tickLength = 60
+        let tickLength = 5
         const gravityBoost = 300000
+        const rotateFactor = 0
+        const noBodies = 1000
 
-        //Collections
+        //Variables
         const bodies = [
-            // { x: 200, y: 200, xDir: 0, yDir: 0, m: 1000, r: 10, color:'rgb(255,255,255)'},
-            // { x: 300, y: 200, xDir: 0, yDir: 0, m: 1000, r: 10, color:'rgb(255,255,255)'},
-            // { x: 400, y: 400, xDir: 0, yDir: 0, m: 1000, r: 10, color:'rgb(255,255,255)'},
+            // {x:width/2, y: height/2, xDir: 0, yDir: 0, m: 10000000, r: 40, color: "rgb(255,255,255)", focused: false},
+            // {x:width/2 + 200, y: height/2, xDir: 0, yDir: 1, m: 100, r: 2, color: "rgb(255,255,255)", focused: false},
         ]
+        let viewingWidth = width
+        let viewingHeight = height
+        let viewingCenter = [width/2, height/2]
 
-        
+        const getTickLength = () => tickLength
         
         const getLength = (vec) => Math.sqrt(vec[0] ** 2 + vec[1] ** 2)
         
         const getVec = (b1, b2) => [(b1.x - b2.x), (b1.y - b2.y)]
         
         const scaleVector = (vec, scale) => [vec[0] * scale, vec[1] * scale]
+
+        const scaleValue = (val, min, max, tgtMin, tgtMax) => {
+            val = val < min ? min : val
+            val = val > max ? max : val
+            val -= min
+            val = val / (max - min)
+            if (tgtMin !== undefined && tgtMax !== undefined) {
+                return (tgtMax - tgtMin) * val + tgtMin
+            }
+            return val
+        }
         
         const getAngle = (vec) => Math.atan2(vec[1], vec[0])
 
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < noBodies; i++) {
             let maxR = width < height ? width : height
             let randAngle = Math.random()*2*Math.PI
             let r = maxR * Math.sqrt(Math.random())
@@ -57,13 +72,12 @@
             bodies.push({ 
                 x: x,
                 y: y,
-                xDir: 0,
-                yDir: 0,
-                // xDir: Math.cos(a) * 0.8,
-                // yDir: Math.sin(a) * 0.8,
+                xDir: Math.cos(a) * rotateFactor,
+                yDir: Math.sin(a) * rotateFactor,
                 m: 500 + Math.random()*5000,
                 r: 1,
-                color: 'rgb(255,255,255)'
+                color: 'rgb(255,255,255)',
+                focused: false
             })
         }
 
@@ -74,7 +88,7 @@
 
         const getGravityVector = (b1) => {
             let forceVector = [0, 0]
-            bodies.forEach(b2 => {
+            bodies.forEach((b2,i) => {
                 if (b1 !== b2){
                     let vec = getVec(b1, b2)
                     let r = getLength(vec)
@@ -91,7 +105,7 @@
             let xDirSum = 0
             let yDirSum = 0
             bodies.forEach((body, i) => {
-                bodies[i] = {...body, x: body.x + body.xDir, y: body.y + body.yDir}
+                bodies[i] = {...body, x: body.x + body.xDir * getTickLength(), y: body.y + body.yDir * getTickLength()}
             });
         }
 
@@ -101,9 +115,12 @@
                 f = scaleVector(f, -1)
                 let ax = f[0] / body.m
                 let ay = f[1]/ body.m
-                let dvx = ax *= tickLength
-                let dvy = ay *= tickLength
-                bodies[i] = {...body, xDir: body.xDir + dvx, yDir: body.yDir + dvy}
+                let dvx = ax *= getTickLength()
+                let dvy = ay *= getTickLength()
+                let newBody = { ...body, xDir: body.xDir + dvx, yDir: body.yDir + dvy }
+                bodies[i] = newBody
+                if(body.focused)
+                    viewingCenter = [body.x, body.y]
             });
         }
 
@@ -154,34 +171,107 @@
             let newyDir = (b1.m*b1.yDir + b2.m * b2.yDir)/newM
             let newR = Math.sqrt(b1.r ** 2 + b2.r ** 2)
             let newColor = "rgb(255,255,255)" //TODO
-            let newBody = { x: newPos[0], y: newPos[1], xDir: newxDir, yDir: newyDir, r: newR, color: newColor, m: newM}
+            let newBody = { x: newPos[0], y: newPos[1], xDir: newxDir, yDir: newyDir, r: newR, color: newColor, m: newM, focused: (b1.focused || b2.focused)}
             return newBody
         }
+
+        const zoom = (scale, ex, ey) => {
+            let viewC = viewingCenter
+            let distCenter = [viewC[0] - ex, viewC[1] - ey]
+            viewC[0] = ex + distCenter[0]*1/scale
+            viewC[1] = ey + distCenter[1]*1/scale
+
+            viewingWidth = viewingWidth * 1/scale
+            viewingHeight = viewingHeight * 1/scale
+        }
+
+        const traverse = (vec) => {
+            const zoom = width/viewingWidth
+            viewingCenter = [viewingCenter[0] + vec[0] * (1 / zoom), viewingCenter[1] + vec[1] * (1 / zoom)]
+        }
+
+        const toRealCoord = (viewX, viewY) => {
+            const zoom = width / viewingWidth
+            let realX = (viewX/zoom) + (viewingCenter[0] - viewingWidth / 2)
+            let realY = (viewY/zoom) + (viewingCenter[1] - viewingHeight / 2)
+            return [realX, realY]
+        }
+
+        const toViewCoord = (realX, realY) => {
+            const zoom = width / viewingWidth
+            const viewX = (realX - (viewingCenter[0] - viewingWidth / 2)) * zoom
+            const viewY = (realY - (viewingCenter[1] - viewingHeight / 2)) * zoom
+            return [viewX, viewY]
+        }
+
+        const focusBody = (b) => {
+            bodies.forEach((body,i ) => {
+                if(body === b)
+                    bodies[i].focused = true
+                else
+                    bodies[i].focused = false
+            });
+        }
+
+        const getFocusedBody = () => {
+            bodies.forEach(body => {
+                if(body.focused)
+                    return body
+            })
+            return
+        }
+
+        const bodyInViewingBounds = (body) => {
+            const inViewingBoundsX = (viewingCenter[0] - viewingWidth/2 - body.r) < body.x && body.x < (viewingCenter[0] + viewingWidth / 2 + body.r)
+            const inViewingBoundsY = (viewingCenter[1] - viewingHeight/2 - body.r) < body.y && body.y < (viewingCenter[1] + viewingHeight / 2 + body.r)
+            return inViewingBoundsX && inViewingBoundsY
+        } 
 
         const draw = () => {
             ctx.fillStyle = `rgb(0,0,0)`;
             ctx.fillRect(0, 0, width, height);
             bodies.forEach(body => {
-                ctx.beginPath()
-                ctx.fillStyle = body.color
-                ctx.strokeStyle = body.color
-                ctx.arc(body.x, body.y, body.r, 0, 2 * Math.PI)
-                ctx.fill()
+                if(bodyInViewingBounds(body)){
+                    const zoom = width / viewingWidth
+                    let viewX, viewY
+                    [viewX, viewY] = toViewCoord(body.x, body.y)
+                    ctx.beginPath()
+                    ctx.fillStyle = body.color
+                    ctx.strokeStyle = body.color
+                    ctx.arc(viewX, viewY, body.r * zoom, 0, 2 * Math.PI)
+                    ctx.fill()
+                }
             });
         }
 
-        // updateBodies()
-        // moveBodies()
-        // performCollisions(checkCollisions())
-        // draw()
-        async function step() {
-            updateBodies()
-            moveBodies()
-            performCollisions(checkCollisions())
-            draw()
-            window.requestAnimationFrame(step)
-        }
-        window.requestAnimationFrame(step)
+        canvas.addEventListener('wheel', e => {
+            let d = e.wheelDelta
+            d = scaleValue(d, -2000, 2000, 1.2, 0.8)
+            zoom(d, e.clientX, e.clientY)
+        })
+
+        document.addEventListener('keydown', e => {
+            if(e.key === "ArrowDown" && getTickLength() > 0)
+                tickLength -= 1
+            if(e.key === "ArrowUp")
+                tickLength += 1
+        })
+        canvas.addEventListener('click', e => {
+            let realCoord = toRealCoord(e.clientX, e.clientY)
+            let virtBody = {x: realCoord[0], y: realCoord[1]}
+            bodies.forEach(body => {
+                if(getLength(getVec(virtBody, body)) < body.r * (body.r < 5 ? 2: 1)){
+                    focusBody(body)
+                }
+            });
+        })
+        // for (let i = 0; i < 10; i++) {
+        //     updateBodies()
+        //     moveBodies()
+        //     performCollisions(checkCollisions())
+        //     draw()
+            
+        // }
         async function step() {
             updateBodies()
             moveBodies()
