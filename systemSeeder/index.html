@@ -11,6 +11,13 @@
             overflow: hidden;
             color: black;
         }
+        .inputs {
+            position: absolute;
+            top: 0;
+        }
+        .slidecontainer {
+            color: white
+        }
     </style>
 </head>
 
@@ -18,27 +25,57 @@
     <canvas class="canvas">
         <p>Your browser does not support canvas</p>
     </canvas>
+    <div id="inputs" class="inputs">
+        <button onclick="seed()">Re-seed</button></br>
+        <div style="margin-top: 10px;">
+            <div class="slidecontainer">
+                <div>Matter cloud: size</div>
+                <input type="range" min="0" max="30" value="10" id="cloud-size-slider"></br>
+                <div>Matter cloud: rotation</div>
+                <input type="range" min="0" max="100" value="0" id="cloud-rotation-slider"></br>
+                <div>Matter cloud: # of bodies</div>
+                <input type="range" min="0" max="2000" value="100" id="cloud-population-slider"></br>
+                <div>Gravity amplifier</div>
+                <input type="range" min="0" max="15000" value="5000" id="gravity-slider"></br>
+            </div>
+        </div>
+    </div>
     <script>
         const canvas = document.querySelector('.canvas');
         const width = canvas.width = window.innerWidth;
         const height = canvas.height = window.innerHeight;
         const ctx = canvas.getContext('2d');
-
-        //Constants
+        
+        //Contanst
         const G = 6.674 * 10 **-11
-        let tickLength = 5
-        const gravityBoost = 300000
-        const rotateFactor = 0
-        const noBodies = 1000
+        
+        //User specified constants
+        let tickLength = 60
+        let gravityBoost = 5000
+        let rotateFactor = 0
+        let noBodies = 400
+        let cloudArea = width
+        
+        //Sliders
+        const cloudSizeSlider = document.getElementById("cloud-size-slider")
+        cloudSizeSlider.addEventListener("input",(e) => cloudArea = (cloudSizeSlider.value/10 * width))
+        const cloudRotationSlider = document.getElementById("cloud-rotation-slider")
+        cloudRotationSlider.addEventListener("input",(e) => rotateFactor = (cloudRotationSlider.value / 1000))
+        const cloudPopulationSlider = document.getElementById("cloud-population-slider")
+        cloudPopulationSlider.addEventListener("input",(e) => noBodies = (cloudPopulationSlider.value))
+        const gravitySlider = document.getElementById("gravity-slider")
+        gravitySlider.addEventListener("input",(e) => gravityBoost = gravitySlider.value)
 
         //Variables
-        const bodies = [
-            // {x:width/2, y: height/2, xDir: 0, yDir: 0, m: 10000000, r: 40, color: "rgb(255,255,255)", focused: false},
-            // {x:width/2 + 200, y: height/2, xDir: 0, yDir: 1, m: 100, r: 2, color: "rgb(255,255,255)", focused: false},
-        ]
         let viewingWidth = width
         let viewingHeight = height
         let viewingCenter = [width/2, height/2]
+        let bodies = [
+            // {x:width/2, y: height/2, xDir: 0, yDir: 0, m: 10000000, r: 40, color: "rgb(255,255,255)", focused: false},
+            // {x:width/2 + 200, y: height/2, xDir: 0, yDir: 1, m: 100, r: 2, color: "rgb(255,255,255)", focused: false},
+            // {x:200, y: 500, xDir: 0, yDir: 0, m: 1000000, r: 20, color: "rgb(255,255,255)", focused: false},
+            // {x:300, y: 500, xDir: 0, yDir: 0, m: 1000000, r: 20, color: "rgb(255,255,255)", focused: false},
+        ]
 
         const getTickLength = () => tickLength
         
@@ -61,44 +98,33 @@
         
         const getAngle = (vec) => Math.atan2(vec[1], vec[0])
 
-        for (let i = 0; i < noBodies; i++) {
-            let maxR = width < height ? width : height
-            let randAngle = Math.random()*2*Math.PI
-            let r = maxR * Math.sqrt(Math.random())
-            let x = Math.cos(randAngle) * r + width/2
-            let y = Math.sin(randAngle) * r + height/2
-            let a = getAngle([width/2 - x, height/2 - y])
-            a = a - Math.PI/2
-            bodies.push({ 
-                x: x,
-                y: y,
-                xDir: Math.cos(a) * rotateFactor,
-                yDir: Math.sin(a) * rotateFactor,
-                m: 500 + Math.random()*5000,
-                r: 1,
-                color: 'rgb(255,255,255)',
-                focused: false
-            })
-        }
-
         const getMassCenter = (b1, b2) => {
             let c = scaleVector(getVec(b2, b1), (b2.m/(b1.m+b2.m)))
             return [b1.x + c[0], b1.y + c[1]]
         }
 
-        const getGravityVector = (b1) => {
-            let forceVector = [0, 0]
-            bodies.forEach((b2,i) => {
-                if (b1 !== b2){
-                    let vec = getVec(b1, b2)
-                    let r = getLength(vec)
-                    let f = (G * (b1.m * b2.m) / r ** 2) * gravityBoost
-                    let a = getAngle(vec)
-                    forceVector[0] += Math.cos(a)*f
-                    forceVector[1] += Math.sin(a)*f
+        const getBodyInteraction = (b1, b2) => {
+            if (b1 !== b2) {
+                let vec = getVec(b1, b2)
+                let r = getLength(vec)
+                let f = (G * (b1.m * b2.m) / r ** 2) * gravityBoost
+                let a = getAngle(vec)
+                return [Math.cos(a) * f, Math.sin(a) * f]
+            }
+            return [0,0]
+        }
+
+        const getGravityVectors = () => {
+            let forces = new Array(bodies.length).fill([0,0]);
+            bodies.forEach((b1,b1i) => {
+                for (let b2i = b1i + 1; b2i < bodies.length; b2i++) {
+                    const b2 = bodies[b2i];
+                    const gVec = getBodyInteraction(b1, b2)
+                    forces[b1i] = [forces[b1i][0] - gVec[0], forces[b1i][1] - gVec[1]]
+                    forces[b2i] = [forces[b2i][0] + gVec[0], forces[b2i][1] + gVec[1]]
                 }
-            });
-            return forceVector
+            })
+            return forces
         }
 
         const moveBodies = () => {
@@ -109,19 +135,23 @@
             });
         }
 
+        const accelerateBody = (body, f) => {
+            let ax = f[0] / body.m
+            let ay = f[1] / body.m
+            let dvx = ax *= getTickLength()
+            let dvy = ay *= getTickLength()
+            let newBody = { ...body, xDir: body.xDir + dvx, yDir: body.yDir + dvy }
+            return newBody
+        }
+        
         const updateBodies = () => {
-            bodies.forEach((body, i) => {
-                let f = getGravityVector(body)
-                f = scaleVector(f, -1)
-                let ax = f[0] / body.m
-                let ay = f[1]/ body.m
-                let dvx = ax *= getTickLength()
-                let dvy = ay *= getTickLength()
-                let newBody = { ...body, xDir: body.xDir + dvx, yDir: body.yDir + dvy }
+            let forces = getGravityVectors()
+            forces.forEach((f, i) => {
+                let newBody = accelerateBody(bodies[i], f)
                 bodies[i] = newBody
-                if(body.focused)
-                    viewingCenter = [body.x, body.y]
-            });
+                if (newBody.focused)
+                    viewingCenter = [newBody.x, newBody.y]
+            })
         }
 
         const checkCollisions = () => {
@@ -244,6 +274,30 @@
             });
         }
 
+        const seed = () => {
+            bodies = []
+            viewingCenter = [width/2, height/2]
+            for (let i = 0; i < noBodies; i++) {
+                let maxR = cloudArea
+                let randAngle = Math.random() * 2 * Math.PI
+                let r = maxR * Math.sqrt(Math.random())
+                let x = Math.cos(randAngle) * r + width / 2
+                let y = Math.sin(randAngle) * r + height / 2
+                let a = getAngle([width / 2 - x, height / 2 - y])
+                a = a - Math.PI / 2
+                bodies.push({
+                    x: x,
+                    y: y,
+                    xDir: Math.cos(a) * rotateFactor * r / maxR,
+                    yDir: Math.sin(a) * rotateFactor * r / maxR,
+                    m: 500 + Math.random() * 5000,
+                    r: 1,
+                    color: 'rgb(255,255,255)',
+                    focused: false
+                })
+            }
+        }
+
         canvas.addEventListener('wheel', e => {
             let d = e.wheelDelta
             d = scaleValue(d, -2000, 2000, 1.2, 0.8)
@@ -255,6 +309,8 @@
                 tickLength -= 1
             if(e.key === "ArrowUp")
                 tickLength += 1
+            if(e.key === " ")
+                logTimes()
         })
         canvas.addEventListener('click', e => {
             let realCoord = toRealCoord(e.clientX, e.clientY)
@@ -265,17 +321,35 @@
                 }
             });
         })
-        // for (let i = 0; i < 10; i++) {
-        //     updateBodies()
-        //     moveBodies()
-        //     performCollisions(checkCollisions())
-        //     draw()
-            
-        // }
+
+        const maxTimes = 100
+        const times = {}
+        const time = (f, args, lbl) => {
+            const title = lbl ? lbl : f.name
+            if(!(title in times))
+                times[title] = []
+            const  t = new Date()
+            const ret = args ? f(...args) : f()
+            times[title].push((new Date() - t))
+            return ret
+        }
+        const logTimes = () => {
+            Object.keys(times).forEach(funcName => {
+                const sum = times[funcName].reduce((a, b) => a + b, 0);
+                const avg = (sum / times[funcName].length) || 0;
+                console.log(`${funcName}: \t avg:${Math.round(avg*100)/100} \t tot:${sum}`);
+            })
+        }
+
+        seed()
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
         async function step() {
-            updateBodies()
+            updateBodies() //66% of runtime
             moveBodies()
-            performCollisions(checkCollisions())
+            const cols = checkCollisions() //33% of runtime
+            performCollisions(cols)
             draw()
             window.requestAnimationFrame(step)
         }
