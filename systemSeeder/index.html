@@ -1,5 +1,5 @@
-<!DOCTYPE html>
 <html>
+    <!DOCTYPE html>
 
 <head>
     <meta charset="utf-8">
@@ -77,8 +77,9 @@
         let bodies = [
             // {x:width/2, y: height/2, xDir: 0, yDir: 0, m: 10000000, r: 40, color: "rgb(255,255,255)", focused: false},
             // {x:width/2 + 200, y: height/2, xDir: 0, yDir: 1, m: 100, r: 2, color: "rgb(255,255,255)", focused: false},
-            // {x:200, y: 500, xDir: 0, yDir: 0, m: 1000000, r: 20, color: "rgb(255,255,255)", focused: false},
-            // {x:300, y: 500, xDir: 0, yDir: 0, m: 1000000, r: 20, color: "rgb(255,255,255)", focused: false},
+            // {x:200, y: 500, xDir: 0, yDir: 0, m: 100000, r: 2, color: "rgb(255,255,255)", focused: false, id: 1},
+            // {x:240, y: 500, xDir: 0, yDir: 0, m: 100000, r: 2, color: "rgb(255,255,255)", focused: false, id: 2},
+            // {x:500, y: 500, xDir: 0, yDir: 0, m: 100000, r: 2, color: "rgb(255,255,255)", focused: false, id: 0},
         ]
 
         const getTickLength = () => tickLength
@@ -108,7 +109,7 @@
         }
 
         const getBodyInteraction = (b1, b2) => {
-            if (b1 !== b2) {
+            if (b1.id !== b2.id) {
                 let vec = getVec(b1, b2)
                 let r = getLength(vec)
                 let f = (G * (b1.m * b2.m) / r ** 2) * gravityBoost
@@ -120,15 +121,17 @@
 
         const getGravityVectors = () => {
             let forces = new Array(bodies.length).fill([0,0]);
+            let collisions = []
             bodies.forEach((b1,b1i) => {
                 for (let b2i = b1i + 1; b2i < bodies.length; b2i++) {
                     const b2 = bodies[b2i];
                     const gVec = getBodyInteraction(b1, b2)
                     forces[b1i] = [forces[b1i][0] - gVec[0], forces[b1i][1] - gVec[1]]
                     forces[b2i] = [forces[b2i][0] + gVec[0], forces[b2i][1] + gVec[1]]
+                    collisions = checkCollision(b1, b2, collisions)
                 }
             })
-            return forces
+            return [forces, collisions]
         }
 
         const moveBodies = () => {
@@ -136,6 +139,8 @@
             let yDirSum = 0
             bodies.forEach((body, i) => {
                 bodies[i] = {...body, x: body.x + body.xDir * getTickLength(), y: body.y + body.yDir * getTickLength()}
+                 if (bodies[i].focused)
+                    viewingCenter = [bodies[i].x, bodies[i].y]
             });
         }
 
@@ -149,50 +154,44 @@
         }
         
         const updateBodies = () => {
-            let forces = getGravityVectors()
+            let [forces, collisions] = getGravityVectors()
             forces.forEach((f, i) => {
                 let newBody = accelerateBody(bodies[i], f)
                 bodies[i] = newBody
-                if (newBody.focused)
-                    viewingCenter = [newBody.x, newBody.y]
             })
+            performCollisions(collisions)
         }
 
-        const checkCollisions = () => {
-            let collisions = []
-            bodies.forEach(b1 => {
-                bodies.forEach(b2 => {
-                    let vec = getVec(b1, b2)
-                    if(b1 !== b2 && getLength(vec) < (b1.r + b2.r)){
-                        collisions = addCollision(collisions, b1, b2)
-                    }
-                });
-            });
+        const checkCollision = (b1, b2, collisions) => {
+            if(b1.id !== b2.id && getLength(getVec(b1, b2)) < (b1.r + b2.r)){
+                collisions = addCollision(collisions, b1, b2)
+            }
             return collisions
         }
 
         const addCollision = (collisions, b1, b2) => {
             for (let i = 0; i < collisions.length; i++) {
-                if (collisions[i].has(b1) || collisions[i].has(b2)) {
-                    collisions[i].add(b1)
-                    collisions[i].add(b2)
+                if (collisions[i].has(b1.id) || collisions[i].has(b2.id)) {
+                    collisions[i].add(b1.id)
+                    collisions[i].add(b2.id)
                     return collisions
                 }
             }
             let newCol = new Set()
-            newCol.add(b1)
-            newCol.add(b2)
+            newCol.add(b1.id)
+            newCol.add(b2.id)
             collisions.push(newCol)
             return collisions
         }
 
         const performCollisions = (collisions) => {
-            let tempBodies = []
             collisions.forEach(collision => {
-                let newBody = Array.from(collision).reduce((acc, body) => performCollision(acc, body))
-                tempBodies.push(newBody)
-                collision.forEach(body => {
-                    bodies.splice(bodies.indexOf(body), 1)
+                let bodiesToCollide = Array.from(collision)
+                    .map(id => bodies.find(b => b.id == id))
+                let newBody = bodiesToCollide.reduce((acc, body) => performCollision(acc, body))
+                collision.forEach(id => {
+                    let i = bodies.findIndex(b => b.id == id)
+                    bodies.splice(i, 1)
                 });
                 bodies.push(newBody)
             });
@@ -205,7 +204,7 @@
             let newyDir = (b1.m*b1.yDir + b2.m * b2.yDir)/newM
             let newR = Math.sqrt(b1.r ** 2 + b2.r ** 2)
             let newColor = "rgb(255,255,255)" //TODO
-            let newBody = { x: newPos[0], y: newPos[1], xDir: newxDir, yDir: newyDir, r: newR, color: newColor, m: newM, focused: (b1.focused || b2.focused)}
+            let newBody = { x: newPos[0], y: newPos[1], xDir: newxDir, yDir: newyDir, r: newR, color: newColor, m: newM, focused: (b1.focused || b2.focused), id: b1.id}
             return newBody
         }
 
@@ -240,7 +239,7 @@
 
         const focusBody = (b) => {
             bodies.forEach((body,i ) => {
-                if(body === b)
+                if(body.id === b.id)
                     bodies[i].focused = true
                 else
                     bodies[i].focused = false
@@ -297,7 +296,8 @@
                     m: 500 + Math.random() * 5000,
                     r: 1,
                     color: 'rgb(255,255,255)',
-                    focused: false
+                    focused: false,
+                    id: i
                 })
             }
         }
@@ -350,10 +350,8 @@
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
         async function step() {
-            updateBodies() //66% of runtime
+            updateBodies()
             moveBodies()
-            const cols = checkCollisions() //33% of runtime
-            performCollisions(cols)
             draw()
             window.requestAnimationFrame(step)
         }
