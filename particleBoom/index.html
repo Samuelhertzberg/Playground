@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>collision</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas class="canvas">
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <script>
+        const canvas = document.querySelector('.canvas');
+        const width = canvas.width = window.innerWidth;
+        const height = canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+
+        document.onclick = e => {
+            generateCollision(e.clientX, e.clientY)
+        }
+
+        document.body.onkeydown = function (e) {
+            if (e.keyCode == 32) {
+                clear()
+            }
+        }
+
+        let particles = []
+        let orgParticles = []
+        let t = 0
+
+        const getRand = (min, max) => Math.random()*(max-min) + min
+
+        const scaleValue = (val, min, max, tgtMin, tgtMax) => {
+            val = val < min ? min : val
+            val = val > max ? max : val
+            val -= min
+            val = val / (max - min)
+            if (tgtMin !== undefined && tgtMax !== undefined) {
+                return (tgtMax - tgtMin) * val + tgtMin
+            }
+            return val
+        }
+
+        const draw = () => {
+            drawParticles()
+        }
+        const drawParticles = () => {
+            const drawParticle = p => {
+                ctx.beginPath()
+                ctx.strokeStyle = p.color
+                ctx.lineWidth = p.size
+                ctx.lineCap = "round"
+                const [lastXSpin, lastYSpin] = p.getSpinPos(t - 1)
+                ctx.moveTo(p.lastX + lastXSpin, p.lastY + lastYSpin)
+                const [xSpin, ySpin] = p.getSpinPos(t)
+                ctx.lineTo(p.x + xSpin, p.y + ySpin)
+                ctx.stroke()
+            }
+            particles.forEach(drawParticle)
+            orgParticles.flat().forEach(drawParticle)
+        }
+
+        const moveParticle = (p) => ({
+            ...p,
+            lastX: p.x,
+            lastY: p.y,
+            x: p.x + Math.cos(p.dir) * p.speed,
+            y: p.y + Math.sin(p.dir) * p.speed,
+            dir: p.dirFunc(p.dir),
+            speed: p.speedFunc(p.speed)
+        })
+
+        const isOOB = (p, margin = 0) => (0 - margin > p.x || p.x > width + margin || 0 - margin > p.y || p.y > height + margin)
+
+        const getDist = (p1, p2) => Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 )
+
+        const moveParticles = () => {
+            const newParticles = []
+            t += 1
+            particles.forEach(p => {
+                const newParticle = moveParticle(p)
+                if(!isOOB(newParticle)){
+                    newParticles.push(newParticle)
+                }
+            })
+            particles = newParticles
+        }
+
+        const moveOrgParticles = () => {
+            const newOrgParticles = []
+            orgParticles.forEach(([p1, p2]) => {
+                const updatedP1 = moveParticle(p1)
+                const updatedP2 = moveParticle(p2)
+                if(!isOOB(updatedP1, 10000) || !isOOB(updatedP2, 10000)){
+                    newOrgParticles.push([updatedP1, updatedP2])
+                }
+            })
+            orgParticles = newOrgParticles
+        }
+
+        const decayParticles = () => {
+            const newParticles = []
+            particles.forEach(p => {
+                if(p.decayFunc()){
+                    
+                } else {
+                    newParticles.push(p)
+                }
+            })
+            particles = newParticles
+        }
+
+        const checkCollision = () => {
+            const newOrgParticles = []
+            orgParticles.forEach(([p1, p2, collision]) => {
+                let d = Math.sqrt((p1.lastX - p2.lastX) ** 2 + (p1.lastY - p2.lastY) ** 2)
+                if(d < Math.max(p1.speed, p2.speed) * 0.1)
+                    generateBoom(p1.lastX, p1.lastY, getRand(10,50), p2.speed)
+                else
+                    newOrgParticles.push([p1, p2])
+            })
+            orgParticles = newOrgParticles
+        }
+
+        const clear = () => {
+            ctx.fillStyle = 'black'
+            ctx.fillRect(0,0, width, height)
+            particles = []
+        }
+
+        const generateBoom = (x, y, n, impactEnergy) => {
+            const energyScaling = scaleValue(impactEnergy, 1, 100, 0.1, 3)
+            t = 0
+            for (let i = 0; i < n; i++) {
+                const size = getRand(1, 2)
+                const dir = getRand(0, Math.PI * 2)
+                const speed = getRand(6, 15) * energyScaling
+                const turnFactor = getRand(-0.01, 0.01) * energyScaling
+                const spinFactor = (getRand(0, 1.1) ** (10)) * energyScaling
+                const spinPeriodFactor = getRand(0, 1)
+                const decayChangePerTick = getRand(0.001, 0.005)
+                particles.push({
+                    x: x,
+                    y: y,
+                    lastX: x,
+                    lastY: y,
+                    size,
+                    dir,
+                    speed,
+                    dirFunc: (d) => d + turnFactor,
+                    speedFunc: (s) => s,
+                    decayFunc: () => Math.random() <= decayChangePerTick,
+                    color: `rgb(${Math.random() * 255},${Math.random() * 255},${Math.random() * 255})`,
+                    getSpinPos: (t) => [Math.cos(t * spinPeriodFactor) * spinFactor, Math.sin(t * spinPeriodFactor) * spinFactor]
+                })
+            }
+        }
+
+        const generateCollision = (collisionX, collisionY) => {
+            const particleSpeed = getRand(20, 100)
+            const fromDirection = Math.random()*Math.PI*2
+            const distFromImpact = width - (width % particleSpeed)
+
+            const getOrgParticle = (dir, dist, speed, x, y) => ({
+                x: x + Math.cos(dir) * dist,
+                y: y + Math.sin(dir) * dist,
+                lastX: x + Math.cos(dir) * dist,
+                lastY: y + Math.sin(dir) * dist,
+                size: 2,
+                dir: dir + Math.PI,
+                speed,
+                dirFunc: (d) => d,
+                speedFunc: (d) => d,
+                decayFunc: () => false,
+                color: `rgb(255,255,255)`,
+                getSpinPos: (t) => [0, 0],
+            })
+            const orgP1 = getOrgParticle(fromDirection, distFromImpact, particleSpeed, collisionX, collisionY)
+            const orgP2 = getOrgParticle(fromDirection + Math.PI, distFromImpact, particleSpeed, collisionX, collisionY)
+            orgParticles.push([orgP1, orgP2])
+        }
+        
+        clear()
+        setTimeout(() => alert("Click to collide particles, press spacebar to clear screen"), 100)
+        
+        const go = () => {
+            moveParticles()
+            moveOrgParticles()
+            checkCollision()
+            decayParticles()
+            draw()
+        }
+        go()
+        async function step() {
+            go()
+            window.requestAnimationFrame(step)
+        }
+        window.requestAnimationFrame(step)
+    </script>
+</body>
+
+</html>
