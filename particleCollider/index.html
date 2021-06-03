@@ -169,7 +169,8 @@
         const generateCollision = (collisionX, collisionY) => {
             const particleSpeed = getRand(20, 100)
             const fromDirection = Math.random()*Math.PI*2
-            const distFromImpact = width - (width % particleSpeed)
+            const maxDim = Math.max(width, height)
+            const distFromImpact = maxDim - (maxDim % particleSpeed)
 
             const getOrgParticle = (dir, dist, speed, x, y) => ({
                 x: x + Math.cos(dir) * dist,
