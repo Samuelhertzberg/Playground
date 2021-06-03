@@ -8,3 +8,5 @@ This is my collection of very short projects that I do for fun.
 
 [System seeder](https://samuelhertzberg.github.io/Playground/systemSeeder/)
 
+[particle collider](https://samuelhertzberg.github.io/Playground/particleCollider/index.html)
+
