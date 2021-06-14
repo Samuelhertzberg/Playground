@@ -86,7 +86,8 @@
 
         const moveParticles = () => {
             const newParticles = []
-            t += 1
+            if(particles.length > 0)
+                t += 1
             particles.forEach(p => {
                 const newParticle = moveParticle(p)
                 if(!isOOB(newParticle)){
@@ -140,7 +141,6 @@
 
         const generateBoom = (x, y, n, impactEnergy) => {
             const energyScaling = scaleValue(impactEnergy, 1, 100, 0.1, 3)
-            t = 0
             for (let i = 0; i < n; i++) {
                 const size = getRand(1, 2)
                 const dir = getRand(0, Math.PI * 2)
