@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+        }
+        canvas {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas class="canvas">
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <script>
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        const canvas = document.querySelector('.canvas');
+        const width = canvas.width = Math.min(window.innerWidth, window.innerHeight);
+        const height = canvas.height = Math.min(window.innerWidth, window.innerHeight);
+        const ctx = canvas.getContext('2d');
+
+        let mazeSize = 20
+        let cellWidth = Math.min(width, height)/mazeSize
+        let cells = []
+        for (let y = 0; y < mazeSize; y++) {
+            cells.push([])
+            for (let x = 0; x < mazeSize; x++) {
+                cells[y].push([false, false, false, false])
+            }
+        }
+        let cellsAvailableNeighbours = []
+        solution = []
+
+        const drawTime = 6000 / (mazeSize * mazeSize)
+        // const drawTime = 1
+
+        const deltaDir = [[1, 0], [0, -1], [-1, 0], [0, 1]]
+
+        const getDir = (c1, c2) => {
+            if(c1[0] > c2[0] && c1[1] === c2[1])
+                return 2
+            if(c1[0] < c2[0] && c1[1] === c2[1])
+                return 0
+            if(c1[0] === c2[0] && c1[1] > c2[1])
+                return 1
+            if(c1[0] === c2[0] && c1[1] < c2[1])
+                return 3
+        }
+
+        const isWithinBounds = (x, y) => {
+            return 0 <= x && x < mazeSize && 0 <= y && y < mazeSize
+        }
+
+        // 0: right, 1: up, 2: left, 3: down
+        const removeWall = (x, y, dir) => {
+            if(isWithinBounds(x, y)){
+                cells[y][x][dir] = true
+                removeWallDraw(x, y, dir)
+            }
+            d = deltaDir[dir]
+            const nx = x + d[0]
+            const ny = y + d[1]
+            if(isWithinBounds(nx, ny)){
+                cells[ny][nx][(dir + 2) % 4] = true
+                removeWallDraw(nx, ny, (dir + 2) % 4)
+            }
+        }
+
+        // 0: right, 1: up, 2: left, 3: down
+        const getNeighbours = (x, y) => {
+            let availableNeighbours = []
+            let unavailableNeighbours = []
+            let allNeighbours = []
+            cells[y][x].forEach((available, i) => {
+                let d = deltaDir[i]
+                let n = [x + d[0], y + d[1]]
+                if(isWithinBounds(n[0], n[1])){
+                    if(available)
+                        availableNeighbours.push(n)
+                    else
+                        unavailableNeighbours.push(n)
+                    allNeighbours.push(n)
+                }
+            })
+            return [allNeighbours, availableNeighbours, unavailableNeighbours]
+        }
+
+        const generateMaze = async () => {
+            const stack = []
+            const visited = []
+            visited.push([0, 0].toString())
+            stack.push([0, 0])
+
+            const getUnvisitedNeighbours = (c) => {
+                let [allNeighbours, _1, _2] = getNeighbours(c[0], c[1])
+                return allNeighbours.filter(n => visited.indexOf(n.toString()) === -1)
+            }
+            while (stack.length > 0) {
+                let c = stack.pop()
+                let unvisitedN = getUnvisitedNeighbours(c)
+                if(unvisitedN.length > 0){
+                    stack.push(c)
+                    let c2 = unvisitedN[Math.floor(Math.random() * unvisitedN.length)]
+                    removeWall(c[0], c[1], getDir(c, c2))
+                    await sleep(drawTime)
+                    visited.push(c2.toString())
+                    stack.push(c2)
+                }
+            }
+            draw()
+            cellsAvailableNeighbours = cells.map((row, y) => 
+            row.map((cell, x) => {
+                let [_1, availableNeighbours, _2] = getNeighbours(x, y)
+                return availableNeighbours
+            }))
+        }
+
+        const solve = async () => {
+            await dfs([mazeSize-1, mazeSize-1])
+            drawSolution()
+        }
+
+        const dfs = async (goal) => {
+            const stack = []
+            const visited = []
+            stack.push([[0,0], [[0, 0]]])
+            visited.push([0,0].toString())
+            while (stack.length > 0) {
+                let [c1, path] = stack.pop()
+                if(c1[0] === goal[0] && c1[1] === goal[1] ){
+                    solution = path
+                    break
+                }
+                let availableNeighbours = cellsAvailableNeighbours[c1[1]][c1[0]]
+                availableNeighbours = availableNeighbours.filter(n => visited.indexOf(n.toString()) === -1)
+                if (availableNeighbours.length > 0) {
+                    stack.push([c1, path])
+                    let c2 = availableNeighbours[Math.floor(Math.random() * availableNeighbours.length)]
+                    drawSolveStep(c1, c2)
+                    await sleep(drawTime)
+                    visited.push(c2.toString())
+                    stack.push([c2, path.concat([c2])])
+                }
+            }
+        }
+
+        const bfs = async (goal) => {
+            const stack = []
+            const visited = []
+            stack.push([[0, 0], [[0, 0]]])
+            visited.push([0, 0].toString())
+            while (stack.length > 0) {
+                let [c1, path] = stack.shift()
+                if (c1[0] === goal[0] && c1[1] === goal[1]) {
+                    solution = path
+                    break
+                }
+                let availableNeighbours = cellsAvailableNeighbours[c1[1]][c1[0]]
+                availableNeighbours = availableNeighbours.filter(n => visited.indexOf(n.toString()) === -1)
+                if (availableNeighbours.length > 0) {
+                    stack.push([c1, path])
+                    await sleep(drawTime)
+                    availableNeighbours.forEach(c2 => {
+                        drawSolveStep(c1, c2)
+                        visited.push(c2.toString())
+                        stack.push([c2, path.concat([c2])])
+                    })
+                }
+            }
+        }
+
+        const removeWallDraw = (x, y, dir) => {
+            const cellX = cellWidth * x
+            const cellY = cellWidth * y
+            let coords = []
+            let margin = 0.9
+            if(dir === 0)
+                coords = [cellX + cellWidth, cellY + margin, cellX + cellWidth, cellY + cellWidth - margin]
+            else if (dir === 1)
+                coords = [cellX + margin, cellY, cellX + cellWidth - margin, cellY]
+            else if (dir === 2)
+                coords [cellX, cellY + margin, cellX, cellY + cellWidth - margin]
+            else if (dir === 3)
+                coords = [cellX + margin, cellY + cellWidth, cellX + cellWidth - margin, cellY + cellWidth]
+            ctx.beginPath()
+            ctx.lineWidth = 2
+            ctx.strokeStyle = "black"
+            ctx.moveTo(coords[0], coords[1])
+            ctx.lineTo(coords[2], coords[3])
+            ctx.stroke();
+        }
+
+        const draw = () => {
+            ctx.fillStyle = 'black'
+            ctx.fillRect(0, 0, width, height)
+            cells.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    const [right, up, left, down] = cell
+                    const cellX = cellWidth * x
+                    const cellY = cellWidth * y
+                    walls = []
+                    !right && walls.push([cellX + cellWidth, cellY, cellX + cellWidth, cellY + cellWidth])
+                    !up && walls.push([cellX, cellY, cellX + cellWidth, cellY])
+                    !left && walls.push([cellX, cellY, cellX, cellY + cellWidth])
+                    !down && walls.push([cellX, cellY + cellWidth, cellX + cellWidth, cellY + cellWidth])
+                    ctx.beginPath()
+                    ctx.lineWidth = 1
+                    ctx.strokeStyle = "white"
+                    walls.forEach( (wall) => {
+                        ctx.moveTo(wall[0], wall[1])
+                        ctx.lineTo(wall[2], wall[3])
+                    })
+                    ctx.stroke();
+                })
+            })
+        }
+
+        const drawSolveStep = (c1, c2, color="yellow") => {
+            ctx.beginPath()
+            ctx.lineWidth = cellWidth/4
+            ctx.strokeStyle = color
+            ctx.lineCap = 'round'
+            let x1 = c1[0] * cellWidth + cellWidth/2
+            let y1 = c1[1] * cellWidth + cellWidth/2
+            let x2 = c2[0] * cellWidth + cellWidth/2
+            let y2 = c2[1] * cellWidth + cellWidth/2
+            ctx.moveTo(x1,y1)
+            ctx.lineTo(x2,y2)
+            ctx.stroke()
+        }
+
+        const drawSolution = async () => {
+            draw()
+            for (let i = 0; i < solution.length - 1; i++) {
+                drawSolveStep(solution[i], solution[i+1], "red")
+                await sleep(drawTime/4)
+            }
+        }
+
+        const go = () => {
+            draw()
+        }
+        const visuals = async () => {
+            await generateMaze()
+            await solve()
+        }
+        go()
+        visuals()
+        // async function step() {
+        //     go()
+        //     window.requestAnimationFrame(step)
+        // }
+        // window.requestAnimationFrame(step)
+    </script>
+</body>
+
+</html>
