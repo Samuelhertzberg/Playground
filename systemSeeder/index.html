@@ -48,7 +48,7 @@
         const height = canvas.height = window.innerHeight;
         const ctx = canvas.getContext('2d');
         
-        //Contanst
+        //Contants
         const G = 6.674 * 10 **-11
         
         //User specified constants
@@ -74,13 +74,7 @@
         let viewingWidth = width
         let viewingHeight = height
         let viewingCenter = [width/2, height/2]
-        let bodies = [
-            // {x:width/2, y: height/2, xDir: 0, yDir: 0, m: 10000000, r: 40, color: "rgb(255,255,255)", focused: false},
-            // {x:width/2 + 200, y: height/2, xDir: 0, yDir: 1, m: 100, r: 2, color: "rgb(255,255,255)", focused: false},
-            // {x:200, y: 500, xDir: 0, yDir: 0, m: 100000, r: 2, color: "rgb(255,255,255)", focused: false, id: 1},
-            // {x:240, y: 500, xDir: 0, yDir: 0, m: 100000, r: 2, color: "rgb(255,255,255)", focused: false, id: 2},
-            // {x:500, y: 500, xDir: 0, yDir: 0, m: 100000, r: 2, color: "rgb(255,255,255)", focused: false, id: 0},
-        ]
+        let dragRef = [-1, -1]
 
         const getTickLength = () => tickLength
         
@@ -209,13 +203,15 @@
         }
 
         const zoom = (scale, ex, ey) => {
-            let viewC = viewingCenter
-            let distCenter = [viewC[0] - ex, viewC[1] - ey]
-            viewC[0] = ex + distCenter[0]*1/scale
-            viewC[1] = ey + distCenter[1]*1/scale
+            const zoomFactor = width/viewingWidth
+            let [viewX, viewY] = viewingCenter
+            const centerOffset = [(width / 2 - ex)/2, (height / 2 - ey)/2]
+            viewX -= centerOffset[0] * (scale - 1) * zoomFactor
+            viewY -= centerOffset[1] * (scale - 1) * zoomFactor
 
             viewingWidth = viewingWidth * 1/scale
             viewingHeight = viewingHeight * 1/scale
+            viewingCenter = [viewX, viewY]
         }
 
         const traverse = (vec) => {
@@ -324,6 +320,24 @@
                     focusBody(body)
                 }
             });
+        })
+
+        canvas.addEventListener('mousedown', e => {
+            dragRef = [e.clientX, e.clientY]
+        })
+
+        canvas.addEventListener('mouseup', e => {
+            dragRef = [-1, -1]
+        })
+        canvas.addEventListener('mousemove', e => {
+            if(dragRef[0] > 0 && dragRef[1] > 0){
+                const dx = e.clientX - dragRef[0]
+                const dy = e.clientY - dragRef[1]
+                viewingCenter[0] = viewingCenter[0] - dx
+                viewingCenter[1] = viewingCenter[1] - dy
+                dragRef[0] = e.clientX
+                dragRef[1] = e.clientY
+            }
         })
 
         const maxTimes = 100
