@@ -18,6 +18,22 @@
             overflow: hidden;
             background-color: black;
         }
+        .inputs {
+            display: flex;
+            flex-direction: column;
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        .input_row {
+            width: auto;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+        .lbl {
+            color: white;
+            margin-right: auto;
+        }
     </style>
 </head>
 
@@ -25,32 +41,102 @@
     <canvas class="canvas">
         <p>Your browser does not support canvas</p>
     </canvas>
+    <div class="inputs">
+        <select id="algorithm-setter" class="input_row">
+            <option value="dfs">Depth First Search</option>
+            <option value="greedy-dfs">Greedy Depth First Search</option>
+            <option value="bfs">Breadth First Search</option>
+        </select>
+        <button onclick="generateMaze()" class="input_row">New maze</button>
+        <button onclick="solveMaze()" class="input_row">Solve</button>
+        <div class="input_row">
+            <div class="lbl">
+                Maze Size
+            </div>
+            <input type="number" id="size-setter" class="" min="3" max="100"/>
+        </div>
+        <div class="input_row">
+            <div class="lbl">
+                Multiple Solutions
+            </div>
+            <input type="checkbox" id="multi-setter" name="multi-allowed" value="true"/>
+        </div>
+    </div>
     <script>
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
+        let solver = undefined
+        let greedy = false
+            
         const canvas = document.querySelector('.canvas');
         const width = canvas.width = Math.min(window.innerWidth, window.innerHeight);
         const height = canvas.height = Math.min(window.innerWidth, window.innerHeight);
         const ctx = canvas.getContext('2d');
 
-        let mazeSize = 20
-        let cellWidth = Math.min(width, height)/mazeSize
         let cells = []
-        for (let y = 0; y < mazeSize; y++) {
-            cells.push([])
-            for (let x = 0; x < mazeSize; x++) {
-                cells[y].push([false, false, false, false])
-            }
-        }
         let cellsAvailableNeighbours = []
-        solution = []
-
-        const drawTime = 6000 / (mazeSize * mazeSize)
-        // const drawTime = 1
+        let solution = []
+        
+        let mazeSize = 20
+        let cellWidth = Math.min(width, height) / mazeSize
+        let timeTarget = 0
+        let drawTime = timeTarget / (mazeSize * mazeSize)
 
         const deltaDir = [[1, 0], [0, -1], [-1, 0], [0, 1]]
+
+        let mazeStatus = 0 // 0: unbuilt, 1: building in process, 2: done building, 3: done building w multiple solutions
+
+        let multipleSolutionsAllowed = false
+
+        const setAlgorithm = (algo) => {
+            greedy = false
+            switch (algo) {
+                case "bfs":
+                    solver = bfs
+                    break;
+                case "dfs":
+                    solver = dfs
+                    break;
+                case "greedy-dfs":
+                    solver = dfs
+                    greedy = true
+                    break;
+                default:
+                    solver = dfs
+                    document.getElementById("algorithm-setter").value = "Depth First Search"
+                    break;
+            }
+        }
+
+        const setMazeSize = (size) => {
+            mazeSize = size
+            cellWidth = Math.min(width, height) / mazeSize
+            drawTime = timeTarget / (mazeSize * mazeSize)
+            reset()
+            drawGrid()
+        }
+
+        const algorithmSelector = document.getElementById("algorithm-setter")
+        algorithmSelector.addEventListener("change", (e) => setAlgorithm(e.target.value))
+        const sizeSetter = document.getElementById("size-setter")
+        sizeSetter.value = mazeSize
+        sizeSetter.addEventListener("change", (e) => setMazeSize(parseInt(e.target.value)))
+        const multiSetter = document.getElementById("multi-setter")
+        multiSetter.addEventListener("change", (e) => {
+            if(e.target.value === "true"){
+                if(!multipleSolutionsAllowed && mazeStatus === 2){
+                    createMultipleSolutions()
+                    mazeStatus = 3
+                }
+                multipleSolutionsAllowed = true
+                e.target.value = "false"
+            } else {
+                multipleSolutionsAllowed = false
+                e.target.value = "true"
+            }
+        })
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
 
         const getDir = (c1, c2) => {
             if(c1[0] > c2[0] && c1[1] === c2[1])
@@ -79,6 +165,7 @@
             if(isWithinBounds(nx, ny)){
                 cells[ny][nx][(dir + 2) % 4] = true
                 removeWallDraw(nx, ny, (dir + 2) % 4)
+                sleep(drawTime)
             }
         }
 
@@ -101,7 +188,24 @@
             return [allNeighbours, availableNeighbours, unavailableNeighbours]
         }
 
+        const reset = () => {
+            cells = []
+            for (let y = 0; y < mazeSize; y++) {
+                cells.push([])
+                for (let x = 0; x < mazeSize; x++) {
+                    cells[y].push([false, false, false, false])
+                }
+            }
+            cellsAvailableNeighbours = []
+            solution = []
+            drawGrid()
+        }
+
         const generateMaze = async () => {
+            if(mazeStatus === 1)
+                return
+            mazeStatus = 1
+            reset()
             const stack = []
             const visited = []
             visited.push([0, 0].toString())
@@ -118,22 +222,40 @@
                     stack.push(c)
                     let c2 = unvisitedN[Math.floor(Math.random() * unvisitedN.length)]
                     removeWall(c[0], c[1], getDir(c, c2))
-                    await sleep(drawTime)
+                    if(mazeSize <= 100)
+                        await sleep(drawTime)
                     visited.push(c2.toString())
                     stack.push(c2)
                 }
-            }
-            draw()
-            cellsAvailableNeighbours = cells.map((row, y) => 
-            row.map((cell, x) => {
-                let [_1, availableNeighbours, _2] = getNeighbours(x, y)
-                return availableNeighbours
-            }))
+            }            
+            multipleSolutionsAllowed && createMultipleSolutions()
+            createNeighbourMap()
+            drawGrid()
+            mazeStatus = multipleSolutionsAllowed ? 3 : 2
         }
 
-        const solve = async () => {
-            await dfs([mazeSize-1, mazeSize-1])
-            drawSolution()
+        const createNeighbourMap = () => {
+            cellsAvailableNeighbours = cells.map((row, y) =>
+                row.map((cell, x) => {
+                    let [_1, availableNeighbours, _2] = getNeighbours(x, y)
+                    return availableNeighbours
+                })
+            )
+        }
+
+        const createMultipleSolutions = () => {
+            for (let i = 0; i < mazeSize * 10; i++) {
+                const r = (n = mazeSize) => Math.floor(Math.random() * n)
+                const [x, y, w] = [r(), r(), r(4)]
+                cells[y][x][w] = true
+                removeWall(x, y, w)
+            }
+            createNeighbourMap()
+            drawGrid()
+        }
+        
+        const getMDistance = (c1, c2) => {
+            return Math.abs(c1[0] - c2[0]) + Math.abs(c1[1] - c2[1])
         }
 
         const dfs = async (goal) => {
@@ -152,6 +274,10 @@
                 if (availableNeighbours.length > 0) {
                     stack.push([c1, path])
                     let c2 = availableNeighbours[Math.floor(Math.random() * availableNeighbours.length)]
+                    if(greedy && availableNeighbours.length > 1){
+                        availableNeighbours.sort((c2, c3) => (getMDistance(goal, c2) - getMDistance(goal, c3)))
+                        c2 = availableNeighbours[0]
+                    }
                     drawSolveStep(c1, c2)
                     await sleep(drawTime)
                     visited.push(c2.toString())
@@ -185,6 +311,15 @@
             }
         }
 
+        solver = dfs
+        const solveMaze = async () => {
+            drawGrid()
+            if(mazeStatus >= 2){
+                await solver([mazeSize - 1, mazeSize - 1])
+                drawSolution()
+            }
+        }
+
         const removeWallDraw = (x, y, dir) => {
             const cellX = cellWidth * x
             const cellY = cellWidth * y
@@ -206,7 +341,7 @@
             ctx.stroke();
         }
 
-        const draw = () => {
+        const drawGrid = () => {
             ctx.fillStyle = 'black'
             ctx.fillRect(0, 0, width, height)
             cells.forEach((row, y) => {
@@ -231,37 +366,40 @@
             })
         }
 
-        const drawSolveStep = (c1, c2, color="yellow") => {
+        const moveAndApplyLine = (c1, c2) => {
+            let x1 = c1[0] * cellWidth + cellWidth / 2
+            let y1 = c1[1] * cellWidth + cellWidth / 2
+            let x2 = c2[0] * cellWidth + cellWidth / 2
+            let y2 = c2[1] * cellWidth + cellWidth / 2
+            ctx.moveTo(x1, y1)
+            ctx.lineTo(x2, y2)
+        }
+
+        const startPathStroke = (color = "yellow") => {
             ctx.beginPath()
-            ctx.lineWidth = cellWidth/4
+            ctx.lineWidth = cellWidth / 4
             ctx.strokeStyle = color
             ctx.lineCap = 'round'
-            let x1 = c1[0] * cellWidth + cellWidth/2
-            let y1 = c1[1] * cellWidth + cellWidth/2
-            let x2 = c2[0] * cellWidth + cellWidth/2
-            let y2 = c2[1] * cellWidth + cellWidth/2
-            ctx.moveTo(x1,y1)
-            ctx.lineTo(x2,y2)
+        }
+
+        const drawSolveStep = (c1, c2, color) => {
+            startPathStroke(color)
+            moveAndApplyLine(c1, c2)
             ctx.stroke()
         }
 
         const drawSolution = async () => {
-            draw()
+            drawGrid()
             for (let i = 0; i < solution.length - 1; i++) {
                 drawSolveStep(solution[i], solution[i+1], "red")
                 await sleep(drawTime/4)
             }
         }
-
+        reset()
         const go = () => {
-            draw()
-        }
-        const visuals = async () => {
-            await generateMaze()
-            await solve()
+            drawGrid()
         }
         go()
-        visuals()
         // async function step() {
         //     go()
         //     window.requestAnimationFrame(step)
