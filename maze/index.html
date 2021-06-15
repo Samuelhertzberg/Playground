@@ -74,10 +74,11 @@
         let cells = []
         let cellsAvailableNeighbours = []
         let solution = []
+        let removedWalls = []
         
         let mazeSize = 20
         let cellWidth = Math.min(width, height) / mazeSize
-        let timeTarget = 0
+        let timeTarget = 6000
         let drawTime = timeTarget / (mazeSize * mazeSize)
 
         const deltaDir = [[1, 0], [0, -1], [-1, 0], [0, 1]]
@@ -114,25 +115,31 @@
             drawGrid()
         }
 
+        const handleMultiSetterEvent = (e) => {
+            if (e.target.value === "true") {
+                if (!multipleSolutionsAllowed && mazeStatus === 2) {
+                    toggleMultipleSolutions()
+                    mazeStatus = 3
+                }
+                multipleSolutionsAllowed = true
+                e.target.value = "false"
+            } else {
+                if (mazeStatus === 3) {
+                    toggleMultipleSolutions(false)
+                    mazeStatus = 2
+                }
+                multipleSolutionsAllowed = false
+                e.target.value = "true"
+            }
+        }
+
         const algorithmSelector = document.getElementById("algorithm-setter")
         algorithmSelector.addEventListener("change", (e) => setAlgorithm(e.target.value))
         const sizeSetter = document.getElementById("size-setter")
         sizeSetter.value = mazeSize
         sizeSetter.addEventListener("change", (e) => setMazeSize(parseInt(e.target.value)))
         const multiSetter = document.getElementById("multi-setter")
-        multiSetter.addEventListener("change", (e) => {
-            if(e.target.value === "true"){
-                if(!multipleSolutionsAllowed && mazeStatus === 2){
-                    createMultipleSolutions()
-                    mazeStatus = 3
-                }
-                multipleSolutionsAllowed = true
-                e.target.value = "false"
-            } else {
-                multipleSolutionsAllowed = false
-                e.target.value = "true"
-            }
-        })
+        multiSetter.addEventListener("change", handleMultiSetterEvent)
 
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
@@ -154,17 +161,17 @@
         }
 
         // 0: right, 1: up, 2: left, 3: down
-        const removeWall = (x, y, dir) => {
+        const setWall = (x, y, dir, wall=false) => {
             if(isWithinBounds(x, y)){
-                cells[y][x][dir] = true
-                removeWallDraw(x, y, dir)
+                cells[y][x][dir] = !wall
+                drawSingleWall(x, y, dir, wall ? "white" : "black")
             }
             d = deltaDir[dir]
             const nx = x + d[0]
             const ny = y + d[1]
             if(isWithinBounds(nx, ny)){
-                cells[ny][nx][(dir + 2) % 4] = true
-                removeWallDraw(nx, ny, (dir + 2) % 4)
+                cells[ny][nx][(dir + 2) % 4] = !wall
+                drawSingleWall(nx, ny, (dir + 2) % 4, wall ? "white" : "black")
                 sleep(drawTime)
             }
         }
@@ -221,14 +228,14 @@
                 if(unvisitedN.length > 0){
                     stack.push(c)
                     let c2 = unvisitedN[Math.floor(Math.random() * unvisitedN.length)]
-                    removeWall(c[0], c[1], getDir(c, c2))
+                    setWall(c[0], c[1], getDir(c, c2))
                     if(mazeSize <= 100)
                         await sleep(drawTime)
                     visited.push(c2.toString())
                     stack.push(c2)
                 }
             }            
-            multipleSolutionsAllowed && createMultipleSolutions()
+            multipleSolutionsAllowed && toggleMultipleSolutions()
             createNeighbourMap()
             drawGrid()
             mazeStatus = multipleSolutionsAllowed ? 3 : 2
@@ -243,12 +250,20 @@
             )
         }
 
-        const createMultipleSolutions = () => {
-            for (let i = 0; i < mazeSize * 10; i++) {
-                const r = (n = mazeSize) => Math.floor(Math.random() * n)
-                const [x, y, w] = [r(), r(), r(4)]
-                cells[y][x][w] = true
-                removeWall(x, y, w)
+        const toggleMultipleSolutions = (enable=true) => {
+            if(enable){
+                for (let i = 0; i < mazeSize * 10; i++) {
+                    const r = (n = mazeSize) => Math.floor(Math.random() * n)
+                    const [x, y, w] = [r(), r(), r(4)]
+                    !cells[y][x][w] && removedWalls.push([x, y, w])
+                    cells[y][x][w] = true
+                    setWall(x, y, w)
+                }
+            } else {
+                removedWalls.forEach(([x, y, w]) => {
+                    setWall(x, y, w, true)
+                })
+                removedWalls = []
             }
             createNeighbourMap()
             drawGrid()
@@ -320,7 +335,7 @@
             }
         }
 
-        const removeWallDraw = (x, y, dir) => {
+        const drawSingleWall = (x, y, dir, color="black") => {
             const cellX = cellWidth * x
             const cellY = cellWidth * y
             let coords = []
@@ -335,7 +350,7 @@
                 coords = [cellX + margin, cellY + cellWidth, cellX + cellWidth - margin, cellY + cellWidth]
             ctx.beginPath()
             ctx.lineWidth = 2
-            ctx.strokeStyle = "black"
+            ctx.strokeStyle = color
             ctx.moveTo(coords[0], coords[1])
             ctx.lineTo(coords[2], coords[3])
             ctx.stroke();
@@ -344,26 +359,36 @@
         const drawGrid = () => {
             ctx.fillStyle = 'black'
             ctx.fillRect(0, 0, width, height)
+            walls = []
             cells.forEach((row, y) => {
                 row.forEach((cell, x) => {
                     const [right, up, left, down] = cell
                     const cellX = cellWidth * x
                     const cellY = cellWidth * y
-                    walls = []
                     !right && walls.push([cellX + cellWidth, cellY, cellX + cellWidth, cellY + cellWidth])
                     !up && walls.push([cellX, cellY, cellX + cellWidth, cellY])
                     !left && walls.push([cellX, cellY, cellX, cellY + cellWidth])
                     !down && walls.push([cellX, cellY + cellWidth, cellX + cellWidth, cellY + cellWidth])
-                    ctx.beginPath()
-                    ctx.lineWidth = 1
-                    ctx.strokeStyle = "white"
-                    walls.forEach( (wall) => {
-                        ctx.moveTo(wall[0], wall[1])
-                        ctx.lineTo(wall[2], wall[3])
-                    })
-                    ctx.stroke();
                 })
             })
+            ctx.beginPath()
+            ctx.lineWidth = 1
+            ctx.strokeStyle = "white"
+            walls.forEach( (wall) => {
+                ctx.moveTo(wall[0], wall[1])
+                ctx.lineTo(wall[2], wall[3])
+            })
+            ctx.stroke();
+            const mazeWidth = mazeSize * cellWidth
+            ctx.beginPath()
+            ctx.lineWidth = 2
+            ctx.strokeStyle = "white"
+            ctx.moveTo(0, 0)
+            ctx.lineTo(mazeWidth, 0)
+            ctx.lineTo(mazeWidth, mazeWidth)
+            ctx.lineTo(0, mazeWidth)
+            ctx.lineTo(0, 0)
+            ctx.stroke()
         }
 
         const moveAndApplyLine = (c1, c2) => {
