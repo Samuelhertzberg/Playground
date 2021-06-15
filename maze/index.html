@@ -46,6 +46,7 @@
             <option value="dfs">Depth First Search</option>
             <option value="greedy-dfs">Greedy Depth First Search</option>
             <option value="bfs">Breadth First Search</option>
+            <option value="astar">A*</option>
         </select>
         <button onclick="generateMaze()" class="input_row">New maze</button>
         <button onclick="solveMaze()" class="input_row">Solve</button>
@@ -100,6 +101,9 @@
                     solver = dfs
                     greedy = true
                     break;
+                case "astar":
+                    solver = astar
+                    break;
                 default:
                     solver = dfs
                     document.getElementById("algorithm-setter").value = "Depth First Search"
@@ -108,11 +112,14 @@
         }
 
         const setMazeSize = (size) => {
-            mazeSize = size
-            cellWidth = Math.min(width, height) / mazeSize
-            drawTime = timeTarget / (mazeSize * mazeSize)
-            reset()
-            drawGrid()
+            if(mazeStatus != 1){
+                mazeSize = size
+                cellWidth = Math.min(width, height) / mazeSize
+                drawTime = timeTarget / (mazeSize * mazeSize)
+                mazeStatus = 0
+                reset()
+                drawGrid()
+            }
         }
 
         const handleMultiSetterEvent = (e) => {
@@ -158,6 +165,10 @@
 
         const isWithinBounds = (x, y) => {
             return 0 <= x && x < mazeSize && 0 <= y && y < mazeSize
+        }
+
+        const isSameCell = (c1, c2) => {
+            return c1[0] === c2[0] && c1[1] === c2[1]
         }
 
         // 0: right, 1: up, 2: left, 3: down
@@ -326,6 +337,41 @@
             }
         }
 
+        const astar = async (goal) => {
+            const f = (c, path) => path.length + getMDistance(c, goal)**2
+            const nodeList = [[[0, 0], [[0, 0]], getMDistance([0,0], goal)]] //[cell, path, cost]
+            const visited = {}
+            const insert = (node) => {
+                let insertIndex = nodeList.length
+                nodeList.forEach((n2, i) => {
+                    if(n2[2] > node[2] && insertIndex > i)
+                        insertIndex = i
+                    if(isSameCell(node[0], n2[0]))
+                        insertIndex = -1
+                })
+                if(insertIndex > -1)
+                    nodeList.splice(insertIndex, 0, node)
+            }
+            let i = 0
+            while(nodeList.length > 0){
+                let [c1, path, v] = nodeList.shift()
+                visited[c1.toString()] = true
+                if(isSameCell(c1, goal)){
+                    solution = path
+                    break
+                }
+                
+                let availableNeighbours = cellsAvailableNeighbours[c1[1]][c1[0]]
+                availableNeighbours = availableNeighbours.filter(nei => !(nei.toString() in visited))
+                availableNeighbours.forEach(nei => {
+                    let newPath = path.concat([nei]) 
+                    insert([nei, newPath, f(nei, newPath)])
+                    drawSolveStep(c1, nei)
+                })
+                await sleep(drawTime)
+            }
+        }
+
         solver = dfs
         const solveMaze = async () => {
             drawGrid()
@@ -433,6 +479,30 @@
         }
         go()
         init()
+
+        // const generateSpec = () => {
+        //     cells = []
+        //     for (let y = 0; y < mazeSize; y++) {
+        //         cells.push([])
+        //         for (let x = 0; x < mazeSize; x++) {
+        //             cells[y].push([true, true, true, true])
+        //         }
+        //     }
+        //     cells.forEach((row, y) => {
+        //         if(y < mazeSize - 1){
+        //             setWall(mazeSize - 2, y, 0, true)
+        //         }
+        //     })
+        //     cells[mazeSize - 2].forEach((cell, x) => {
+        //         if (x >= 1 && x < mazeSize - 1){
+        //             setWall(x, mazeSize - 2, 3, true)
+        //         }
+        //     })
+        //     mazeStatus = 2
+        // }
+        // generateSpec()
+        // createNeighbourMap()
+        // drawGrid()
     </script>
 </body>
 
