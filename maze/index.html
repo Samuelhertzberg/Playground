@@ -263,6 +263,7 @@
 
         const toggleMultipleSolutions = (enable=true) => {
             if(enable){
+                removedWalls = []
                 for (let i = 0; i < mazeSize * 10; i++) {
                     const r = (n = mazeSize) => Math.floor(Math.random() * n)
                     const [x, y, w] = [r(), r(), r(4)]
