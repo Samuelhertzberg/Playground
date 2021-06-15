@@ -420,16 +420,19 @@
                 await sleep(drawTime/4)
             }
         }
+
+        const init = async () => {
+            reset()
+            await generateMaze()
+            await solveMaze()
+        }
+
         reset()
         const go = () => {
             drawGrid()
         }
         go()
-        // async function step() {
-        //     go()
-        //     window.requestAnimationFrame(step)
-        // }
-        // window.requestAnimationFrame(step)
+        init()
     </script>
 </body>
 
