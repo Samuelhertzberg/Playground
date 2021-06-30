@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+        }
+        canvas {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas class="canvas">
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <script>
+        let solver = undefined
+        let greedy = false
+            
+        const canvas = document.querySelector('.canvas');
+        const width = canvas.width = window.innerWidth
+        const height = canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        const field = []
+        const pixelsBetweenPoints = 20
+        const xSize = Math.floor(width / pixelsBetweenPoints) + 3
+        const ySize = Math.floor(height / pixelsBetweenPoints) + 3
+        let flowSeeds = []
+        let noFlowSeeds = 5
+        const windAcceleraton = 0.2
+        const seedAreaOfEffect = 0.3
+        const seedEffect = 30
+        
+        const scaleValue = (val, min, max, tgtMin, tgtMax) => {
+            val = val < min ? min : val
+            val = val > max ? max : val
+            val -= min
+            val = val / (max - min)
+            if (tgtMin !== undefined && tgtMax !== undefined) {
+                return (tgtMax - tgtMin) * val + tgtMin
+            }
+            return val
+        }
+
+        const draw = () => {
+            ctx.fillStyle = `rgb(0,0,0)`;
+            ctx.fillRect(0, 0, width, height);
+            for (let y = 0; y < ySize; y++) {
+                for (let x = 0; x < xSize; x++) {
+                    const xPos = x * pixelsBetweenPoints
+                    const yPos = y * pixelsBetweenPoints
+                    const point = field[y][x];
+                    const l = eucDist(0, 0, point[0], point[1])
+                    const lineWidth = scaleValue(l, 10, 50, 0, 8)
+                    const color = scaleValue(l, 10, 50, 0, 255)
+                    const xlen = point[0]
+                    const ylen = point[1]
+                    
+                    ctx.beginPath()
+                    ctx.lineWidth = lineWidth
+                    ctx.lineCap = "round"
+                    var grad = ctx.createLinearGradient(
+                        Math.floor(xPos),
+                        Math.floor(yPos),
+                        Math.ceil(xPos + point[0]),
+                        Math.ceil(yPos + point[1])
+                    );
+                    grad.addColorStop(0, "rgb(0,0,0,0)");
+                    grad.addColorStop(0.3, "rgb(0,0,0,0)");
+                    grad.addColorStop(1, `rgb(${color},${color},${color})`);
+                    ctx.strokeStyle = grad;
+                    ctx.moveTo(xPos, yPos)
+                    ctx.lineTo(xPos + xlen, yPos + ylen)
+                    ctx.stroke();
+                }
+            }
+            // flowSeeds.forEach(seed => {
+            //     ctx.beginPath()
+            //     ctx.lineWidth = 10
+            //     ctx.lineCap = "round"
+            //     ctx.strokeStyle = "red";
+            //     ctx.moveTo(seed.x, seed.y)
+            //     ctx.lineTo(seed.x + seed.xDir, seed.y + seed.yDir)
+            //     ctx.stroke();
+            //     ctx.beginPath()
+            //     ctx.lineWidth = 10
+            //     ctx.lineCap = "round"
+            //     ctx.strokeStyle = "blue";
+            //     ctx.moveTo(seed.xTgt, seed.yTgt)
+            //     ctx.lineTo(seed.xTgt, seed.yTgt)
+            //     ctx.stroke();
+            // })
+        }
+
+        const updateFlowSeeds = () => {
+            flowSeeds = flowSeeds.map(seed => {
+                let dist = Math.sqrt((seed.x - seed.xTgt) ** 2, (seed.y - seed.yTgt) ** 2)
+                let a = Math.atan2(seed.yTgt - seed.y, seed.xTgt - seed.x);
+                return {
+                    x: seed.x + seed.xDir,
+                    y: seed.y + seed.yDir,
+                    xDir: (seed.xDir + Math.cos(a) * windAcceleraton) * (0.99),
+                    yDir: (seed.yDir + Math.sin(a) * windAcceleraton) * (0.99),
+                    xTgt: dist < 10 ? Math.random() * width : seed.xTgt,
+                    yTgt: dist < 10 ? Math.random() * height : seed.yTgt
+                }
+            })
+        }
+
+        const eucDist = (x1,y1,x2,y2) => {
+            return Math.sqrt((x1-x2)**2 + (y1-y2)**2)
+        }
+
+        const getValue = (x, y) => {
+            const trueX = x * pixelsBetweenPoints
+            const trueY = y * pixelsBetweenPoints
+            let newValue = [0,0]
+            flowSeeds.forEach(seed => {
+                const dist = eucDist(trueX, trueY, seed.x, seed.y)
+                const scale = scaleValue(dist, 0, Math.max(width, height) * seedAreaOfEffect, 1, 0)
+                newValue[0] = newValue[0] + (seed.xDir * scale) * seedEffect
+                newValue[1] = newValue[1] + (seed.yDir * scale) * seedEffect
+            });
+            return newValue
+        }
+
+        const updateFlow = () => {
+            for (let y = 0; y < ySize; y++) {
+                for (let x = 0; x < xSize; x++) {
+                    field[y][x] = getValue(x, y)
+                }            
+            }
+        }
+
+        const init = () => {
+            for (let y = 0; y < ySize; y++) {
+                let row = []
+                for (let x = 0; x < xSize; x++) {
+                    row.push([10, 10])
+                }
+                field.push(row)
+            }
+            for (let i = 0; i < noFlowSeeds; i++) {
+                flowSeeds.push({x: Math.random() * width, y: Math.random() * height, xDir: 0, yDir: 0, xTgt: Math.random() * width, yTgt: Math.random() * height})
+            }
+        }
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        const go = async () => {
+            updateFlowSeeds()
+            updateFlow()
+            draw()
+        }
+        init()
+        go()
+        async function step() {
+            go()
+            window.requestAnimationFrame(step)
+        }
+        window.requestAnimationFrame(step)
+    </script>
+</body>
+
+</html>

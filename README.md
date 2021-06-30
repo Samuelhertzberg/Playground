@@ -12,3 +12,5 @@ This is my collection of very short projects that I do for fun.
 
 [Maze solver](https://samuelhertzberg.github.io/Playground/maze/)
 
+[Flow](https://samuelhertzberg.github.io/Playground/flow/)
+
