@@ -32,16 +32,16 @@
         const canvas = document.querySelector('.canvas');
         const width = canvas.width = window.innerWidth
         const height = canvas.height = window.innerHeight;
+        const widthOffset = width * 0.1
+        const heightOffset = height * 0.1
         const ctx = canvas.getContext('2d');
         const field = []
-        const pixelsBetweenPoints = 20
-        const xSize = Math.floor(width / pixelsBetweenPoints) + 3
-        const ySize = Math.floor(height / pixelsBetweenPoints) + 3
+        const numberOfStraws = 6000
         let flowSeeds = []
-        let noFlowSeeds = 5
-        const windAcceleraton = 0.2
-        const seedAreaOfEffect = 0.3
-        const seedEffect = 30
+        let noFlowSeeds = 10
+        const windAcceleraton = 0.3
+        const seedAreaOfEffect = 0.4
+        const seedEffect = 10
         
         const scaleValue = (val, min, max, tgtMin, tgtMax) => {
             val = val < min ? min : val
@@ -57,34 +57,32 @@
         const draw = () => {
             ctx.fillStyle = `rgb(0,0,0)`;
             ctx.fillRect(0, 0, width, height);
-            for (let y = 0; y < ySize; y++) {
-                for (let x = 0; x < xSize; x++) {
-                    const xPos = x * pixelsBetweenPoints
-                    const yPos = y * pixelsBetweenPoints
-                    const point = field[y][x];
-                    const l = eucDist(0, 0, point[0], point[1])
-                    const lineWidth = scaleValue(l, 10, 50, 0, 8)
-                    const color = scaleValue(l, 10, 50, 0, 255)
-                    const xlen = point[0]
-                    const ylen = point[1]
-                    
-                    ctx.beginPath()
-                    ctx.lineWidth = lineWidth
-                    ctx.lineCap = "round"
-                    var grad = ctx.createLinearGradient(
-                        Math.floor(xPos),
-                        Math.floor(yPos),
-                        Math.ceil(xPos + point[0]),
-                        Math.ceil(yPos + point[1])
-                    );
-                    grad.addColorStop(0, "rgb(0,0,0,0)");
-                    grad.addColorStop(0.3, "rgb(0,0,0,0)");
-                    grad.addColorStop(1, `rgb(${color},${color},${color})`);
-                    ctx.strokeStyle = grad;
-                    ctx.moveTo(xPos, yPos)
-                    ctx.lineTo(xPos + xlen, yPos + ylen)
-                    ctx.stroke();
-                }
+            for (let i = 0; i < field.length; i++) {
+                const xPos = field[i][0]
+                const yPos = field[i][1]
+                const point = getValue(xPos, yPos)
+                const l = eucDist(0, 0, point[0], point[1])
+                const lineWidth = scaleValue(l, 10, 50, 0, 8)
+                const color = scaleValue(l, 10, 50, 0, 255)
+                const xlen = point[0]
+                const ylen = point[1]
+                
+                ctx.beginPath()
+                ctx.lineWidth = lineWidth
+                ctx.lineCap = "round"
+                var grad = ctx.createLinearGradient(
+                    Math.floor(xPos),
+                    Math.floor(yPos),
+                    Math.ceil(xPos + point[0]),
+                    Math.ceil(yPos + point[1])
+                );
+                grad.addColorStop(0, "rgb(0,0,0,0)");
+                grad.addColorStop(0.3, "rgb(0,0,0,0)");
+                grad.addColorStop(1, `rgb(${color},${color},${color})`);
+                ctx.strokeStyle = grad;
+                ctx.moveTo(xPos, yPos)
+                ctx.lineTo(xPos + xlen, yPos + ylen)
+                ctx.stroke();
             }
             // flowSeeds.forEach(seed => {
             //     ctx.beginPath()
@@ -124,36 +122,39 @@
         }
 
         const getValue = (x, y) => {
-            const trueX = x * pixelsBetweenPoints
-            const trueY = y * pixelsBetweenPoints
             let newValue = [0,0]
             flowSeeds.forEach(seed => {
-                const dist = eucDist(trueX, trueY, seed.x, seed.y)
-                const scale = scaleValue(dist, 0, Math.max(width, height) * seedAreaOfEffect, 1, 0)
-                newValue[0] = newValue[0] + (seed.xDir * scale) * seedEffect
-                newValue[1] = newValue[1] + (seed.yDir * scale) * seedEffect
+                const dist = eucDist(x, y, seed.x, seed.y)
+                const scale = scaleValue(dist, 0, Math.max(width, height)*seedAreaOfEffect, 1, 0)
+                newValue[0] = newValue[0] + (seed.xDir * (scale) * seedEffect)
+                newValue[1] = newValue[1] + (seed.yDir * (scale) * seedEffect)
             });
             return newValue
         }
 
-        const updateFlow = () => {
-            for (let y = 0; y < ySize; y++) {
-                for (let x = 0; x < xSize; x++) {
-                    field[y][x] = getValue(x, y)
-                }            
-            }
-        }
-
         const init = () => {
-            for (let y = 0; y < ySize; y++) {
-                let row = []
-                for (let x = 0; x < xSize; x++) {
-                    row.push([10, 10])
-                }
-                field.push(row)
+            // ka^2 = 2000/k
+            const widthWPadding = width + widthOffset * 2
+            const heightWPadding = height + heightOffset * 2
+            const k = widthWPadding / heightWPadding
+            const pointsWidth = Math.sqrt(numberOfStraws/k)
+            const pointsHeight = pointsWidth * k
+            const pointDist = widthWPadding/pointsWidth
+            for (let i = 0; i < numberOfStraws; i++) {
+                field.push([
+                    (i % pointsWidth) * pointDist - widthOffset,
+                    Math.floor(i/pointsWidth) * pointDist - heightOffset
+                ])   
             }
             for (let i = 0; i < noFlowSeeds; i++) {
-                flowSeeds.push({x: Math.random() * width, y: Math.random() * height, xDir: 0, yDir: 0, xTgt: Math.random() * width, yTgt: Math.random() * height})
+                flowSeeds.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    xDir: 0,
+                    yDir: 0,
+                    xTgt: Math.random() * width,
+                    yTgt: Math.random() * height
+                })
             }
         }
         function sleep(ms) {
@@ -161,7 +162,6 @@
         }
         const go = async () => {
             updateFlowSeeds()
-            updateFlow()
             draw()
         }
         init()
