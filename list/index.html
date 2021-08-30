@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samuel Hertzberg</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            background-color: black;
+        }
+        .list {
+            display: flex;
+            padding: 15%;
+            padding-top: 10%;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .projectCard {
+            color: white;
+            border-style: solid;
+            border-radius: 15px;
+            padding: 20px;
+            width: 22%;
+            min-width: 150px;
+            margin: 1%;
+            opacity: 0;
+            transition: 0.3s;
+            cursor: pointer
+        }
+        .projectCard:hover {
+            background-color: rgb(45, 45, 45);
+        }
+        
+        .equalHMV:nth-of-type(3n) {
+            margin-right: 0;	
+        }
+
+        .equalHMV:nth-of-type(3n+1) {
+            margin-left: 0;	
+        }
+
+        .fade-in {
+            display: inline-block;
+            animation: fadeIn linear 1s;
+            -webkit-animation: fadeIn linear 1s;
+            -moz-animation: fadeIn linear 1s;
+            -o-animation: fadeIn linear 1s;
+            -ms-animation: fadeIn linear 1s;
+        }
+
+        @keyframes fadeIn {
+            0% {opacity:0;}
+            100% {opacity:1;}
+        }
+
+        @-moz-keyframes fadeIn {
+            0% {opacity:0;}
+            100% {opacity:1;}
+        }
+
+        @-webkit-keyframes fadeIn {
+            0% {opacity:0;}
+            100% {opacity:1;}
+        }
+
+        @-o-keyframes fadeIn {
+            0% {opacity:0;}
+            100% {opacity:1;}
+        }
+
+        @-ms-keyframes fadeIn {
+            0% {opacity:0;}
+            100% {opacity:1;}
+        }
+
+    </style>
+</head>
+
+<body>
+    <div id="list" class="list"></div>
+    <div id="baseplate" class="list"></div>
+    <script>
+        const baseplateDiv = document.getElementById("baseplate")
+        const body = document.getElementsByTagName("body")[0]
+        const listDiv = document.getElementById("list")
+        const projects = [
+            {title: "System Seeder", description: "Watch gravity do its thing and play around with the formation of star systems!", link: "https://samuelhertzberg.github.io/Playground/systemSeeder/"},
+            {title: "Color Wave", description: "I sure hope you like pretty colors and sine waves!", link: "https://samuelhertzberg.github.io/Playground/wave/"},
+            {title: "Maze Solver", description: "Do you hate solving mazes but love pathfinding algorithms? Click here you nerd.", link: "https://samuelhertzberg.github.io/Playground/maze/"},
+            {title: "Boids", description: "These boids look oddly repulsive. Click if you like worm boids I guess.", link: "https://samuelhertzberg.github.io/Playground/boids/"},
+            {title: "Particle Collider", description: "Smash virtual particles together at incredibly speeds! ", link: "https://samuelhertzberg.github.io/Playground/particleCollider/"},
+            {title: "Intro Screen", description: "\"That intro screen sure looked nice Samuel! I would like to see it again please!\" \n-You probably", link: "https://samuelhertzberg.github.io/Playground/"},
+        ]
+
+        
+        const getProjectCard = (project, i) => {
+            const projectCard = document.createElement('div')
+            projectCard.className = `projectCard`
+            const title = document.createElement('h3')
+            title.style.margin = 0
+            title.innerHTML = project.title
+            projectCard.append(title)
+            const description = document.createElement('span')
+            description.innerHTML = project.description
+            description.className = "description"
+            projectCard.append(description)
+            if(project.minHeight){
+                projectCard.style.maxHeight = `${project.minHeight}px`
+            }
+            return projectCard
+        }
+
+        const getHeightOfProjectCard = (project, i) => { //This is not fun
+            const projectCardDiv = getProjectCard(project, i)
+            baseplateDiv.append(projectCardDiv)
+            const minHeight = projectCardDiv.clientHeight + 1000
+            baseplateDiv.removeChild(projectCardDiv)
+            const description = document.createElement('p')
+            description.innerHTML = projects[i].description
+            projectCardDiv.append(description)
+            baseplateDiv.append(projectCardDiv)
+            const maxHeight = projectCardDiv.clientHeight
+            baseplateDiv.removeChild(projectCardDiv)
+            return {...project, minHeight, maxHeight}
+        }
+
+        const addCardListeners = (p, i) => {
+            var typer
+            const pChildren = p.getElementsByTagName("*")
+            const copy = projects[i].description
+            p.addEventListener('mouseenter', () => {
+                if(pChildren.length <= 1){
+                    const description = document.createElement('span')
+                    description.innerHTML = ""
+                    p.append(description)
+                }
+                typer = setInterval(() => {
+                    const description = pChildren[1]
+                    if(description.innerHTML.length + 1 < copy.length){
+                        description.innerHTML = copy.slice(0, description.innerHTML.length + 1)
+                    }
+                }, 20);
+            })
+            p.addEventListener('mouseleave', () => {
+                if (pChildren.length > 1) {
+                    p.removeChild(pChildren[1])
+                }
+                if(typer)
+                    window.clearInterval(typer)
+            })
+        }
+
+        const addCardLink = (card, i) => {
+            card.addEventListener('click', () => {
+                window.location = projects[i].link
+            })
+        }
+
+        const addCards = () => {
+            projects
+                .map(getHeightOfProjectCard)
+                .map(getProjectCard).forEach((p, i) => {
+                    // addCardListeners(p, i)
+                    addCardLink(p, i)
+                    listDiv.append(p)
+                    setTimeout(() => {
+                        p.className += " fade-in"
+                        p.style.opacity = 1
+                    }, 50*i);
+                })
+            body.removeChild(baseplateDiv)
+        }
+
+        addCards()
+    </script>
+</body>
+
+</html>
