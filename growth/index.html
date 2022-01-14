@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Growth</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+        }
+        canvas {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas class="canvas" id="1">
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <canvas class="canvas" id="2" hidden>
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <script>
+        const canvas1 = document.getElementById('1');
+        const canvas2 = document.getElementById('2');
+        const width = canvas1.width = window.innerWidth
+        const height = canvas1.height = window.innerHeight;
+        canvas2.width = window.innerWidth
+        canvas2.height = window.innerHeight;
+        const ctx = canvas1.getContext('2d');
+        const ctx2 = canvas2.getContext('2d');
+        const trees = []
+        let nodeList = []
+        let edgeList = []
+        let neighborMap = {}
+        const edgeLength = 20
+        const interpolationFactor = 1
+        const minDist = edgeLength - 1
+        const branchFactor = 10
+        //sleep function
+        const sleep = (ms) => {
+            return new Promise(resolve => setTimeout(resolve, ms))
+        }
+
+        const euclidean = (n1, n2) => {
+            return Math.sqrt(Math.pow(n2.x - n1.x, 2) + Math.pow(n2.y - n1.y, 2))
+        }
+
+        const checkNodeOutOfBounds = (node) => {
+            return node.x < 0 || node.x > width || node.y < 0 || node.y > height
+        }
+
+        const checkNodeOverlap = (n1) => {
+            for (let i = 0; i < nodeList.length; i++) {
+                const n2 = nodeList[i]
+                if (n1 === n2 || (neighborMap[n1] || []).indexOf(n2) !== -1) {
+                    continue
+                }
+                if (euclidean(n1, n2) < minDist) {
+                    return true
+                }
+            }
+            return false
+        }
+
+        const generateTree = () => {
+            const root = {
+                x: width / 2,
+                y: height / 2
+            }
+            nodeList.push(root)
+            const queue = [root]
+            while (queue.length > 0) {
+                const parent = queue.shift()
+                const newChildren = []
+                for (let i = 0; i < branchFactor; i++) {
+                    const r = Math.random() * Math.PI * 2
+                    const newNode = {
+                        x: parent.x + Math.cos(r) * edgeLength,
+                        y: parent.y + Math.sin(r) * edgeLength
+                    }
+                    if (checkNodeOutOfBounds(newNode) || checkNodeOverlap(newNode)) {
+                        continue
+                    }
+                    newChildren.push(newNode)
+                    nodeList.push(newNode)
+                    edgeList.push({
+                        n1: parent,
+                        n2: newNode
+                    })
+                }
+                neighborMap[`${parent.x},${parent.y}`] = newChildren
+                queue.push(...newChildren)
+            }
+        }
+
+        //draw smooth curve along points
+        const drawCurve = (points, maxIndex = 10000) => {
+            ctx.strokeStyle = '#fff'
+            ctx.beginPath()
+            ctx.moveTo(points[0].x, points[0].y);
+
+
+            for (i = 1; i < points.length - 2 && i < maxIndex; i++) {
+                var xc = (points[i].x + points[i + 1].x) / 2;
+                var yc = (points[i].y + points[i + 1].y) / 2;
+                ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+            }
+            // curve through the last two points
+            if(points[i + 1]){
+                ctx.quadraticCurveTo(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+            }
+            ctx.stroke()
+        }
+
+        const drawSmooth = () => {
+            let paths = generatePaths()
+            clear(ctx)
+            paths.forEach((path) => {
+                drawCurve(path)
+            })
+        }
+
+        const drawSmoothAnimation = async () => {
+            let paths = generatePaths()
+            const longestPath = paths.reduce((a, b) => a.length > b.length ? a : b)
+
+            for (let i = 0; i < longestPath.length; i++) {
+                clear(ctx)
+                paths.forEach((path) => {
+                    drawCurve(path, i)
+                })
+                await sleep(20)
+            }
+        }
+
+        const drawTree = (ctx) => {
+            ctx.strokeStyle = '#fff'
+            edgeList.forEach((edge) => {
+                ctx.beginPath()
+                ctx.moveTo(edge.n1.x, edge.n1.y)
+                ctx.lineTo(edge.n2.x, edge.n2.y)
+                ctx.stroke()
+            })
+            ctx.fillStyle = '#ff0000'
+            nodeList.forEach((node) => {
+                ctx.beginPath()
+                ctx.arc(node.x, node.y, 2, 0, Math.PI * 2)
+                ctx.fill()
+            })
+            //draw root node as yellow
+            ctx.beginPath()
+            ctx.arc(nodeList[0].x, nodeList[0].y, 4, 0, Math.PI * 2)
+            ctx.fill()
+
+        }
+
+        // clear canvas
+        const clear = (ctx) => {
+            ctx.clearRect(0, 0, width, height)
+            ctx.fillStyle = '#000'
+            ctx.fillRect(0, 0, width, height)
+        }
+
+        const reset = () => {
+            nodeList = []
+            edgeList = []
+            neighborMap = {}
+        }
+
+        //Generate all paths to leafs from root
+        const generatePaths = () => {
+            const paths = []
+            const root = nodeList[0]
+            const queue = [[root]]
+            while (queue.length > 0) {
+                const path = queue.shift()
+                const head = path[path.length - 1]
+                const children = neighborMap[`${head.x},${head.y}`]
+                if (children.length > 0) {
+                    children.forEach((child) => {
+                        queue.push([...path, child])
+                    })
+                } else {
+                    paths.push(path)
+                }
+            }
+            return paths
+        }
+        
+        const rootCoords = {
+            x: width / 2,
+            y: height / 2
+        }
+        generateTree()
+        drawTree(ctx2)
+        drawSmoothAnimation().then(() => {
+            alert("R to replay animation \nSpace to see underlying tree \nN to generate new tree")
+        })
+        
+        document.addEventListener('keydown', e => {
+            switch (e.key) {
+                case " ":
+                    canvas1.hidden = !canvas1.hidden
+                    canvas2.hidden = !canvas2.hidden
+                    break;
+                case "r":
+                    clear(ctx)
+                    canvas1.hidden = false
+                    canvas2.hidden = true
+                    drawSmoothAnimation()
+                    break;
+                case "n":
+                    clear(ctx)
+                    clear(ctx2)
+                    reset()
+                    generateTree()
+                    canvas1.hidden = false
+                    canvas2.hidden = true
+                    drawTree(ctx2)
+                    drawSmoothAnimation()
+                    break;
+                default:
+                    break;
+            }
+        })
+    </script>
+</body>
+</html>
