@@ -16,3 +16,5 @@ This is my collection of very short projects that I do for fun.
 
 [Growth](https://samuelhertzberg.github.io/Playground/growth/)
 
+[Ripples](https://samuelhertzberg.github.io/Playground/ripples/)
+

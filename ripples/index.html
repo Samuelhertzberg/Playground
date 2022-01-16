@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ripples</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            color: black;
+        }
+    </style>
+</head>
+
+<body oncontextmenu="return false;">
+    <canvas class="canvas">
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <script>
+        const canvas = document.querySelector('.canvas');
+        const width = canvas.width = window.innerWidth;
+        const height = canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        const resolutionX = 300
+        const resolutionY = 50
+        const stepSizeX = width / resolutionX
+        const stepSizeY = height / resolutionY
+        const propagationSpeed = 1
+        const cutoff = 0.01
+        let time = 0
+        const waveSources = []
+        const waves = []
+
+        const createWave = (waveSource) => {
+            if(time % waveSource.period === 0) {
+                const wave = {
+                    type: waveSource.type,
+                    source: waveSource,
+                    amplitude: waveSource.amplitude,
+                    waveLength: waveSource.waveLength,
+                    age: 0,
+                }
+                waves.push(wave)
+            }
+        }
+
+        const calcWaveAmplitude = (wave) => {
+            return wave.source.amplitude-Math.sqrt(wave.age*propagationSpeed)*0.3
+        }
+
+        const updateWaves = () => {
+            const toRemove = []
+            waves.forEach((wave, i) => {
+                wave.age++
+                wave.amplitude = calcWaveAmplitude(wave)
+                if(wave.amplitude < cutoff || wave.age*propagationSpeed > width *1.5) {
+                    toRemove.push(i)
+                }
+            })
+            toRemove.reverse().forEach(i => waves.splice(i, 1))
+        }
+
+        const scaleValue = (val, min = 0, max = 1, tgtMin = 0, tgtMax = 1) => {
+            val = val < min ? min : val
+            val = val > max ? max : val
+            val -= min
+            val = val / (max - min)
+            return (tgtMax - tgtMin) * val + tgtMin
+        }
+
+        const eucDist = (p1, p2) => {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2))
+        }
+
+        const waveLenCoef = (wave) => {
+            return wave.waveLength * Math.PI / propagationSpeed
+        }
+
+        const isInWave = (pos, wave) => {
+            if (wave.type === 'circle') {
+                const distance = eucDist(pos, wave.source.position)
+                const waveFrontDistance = wave.age * propagationSpeed
+                const isInWave = distance < waveFrontDistance && distance > waveFrontDistance - wave.waveLength
+                const waveDiff = waveFrontDistance - distance
+                return isInWave ? scaleValue(waveDiff, 0, wave.waveLength, 0, 1) : -1
+            }
+        }
+
+        const getValueAtPoint = (x, y) => {
+            let value = 0
+            for (let i = 0; i < waves.length; i++) {
+                const wave = waves[i]
+                const posInWave = isInWave({x, y}, wave)
+                if (posInWave > 0) {
+                    value += Math.sin(posInWave * 2 * Math.PI) * wave.amplitude
+                }
+            }
+            return value
+        }
+
+        const draw = () => {
+            // getValueAtPoint(width / 2 - 100, height / 2)
+            ctx.clearRect(0, 0, width, height)
+            ctx.fillStyle = '#000'
+            ctx.fillRect(0, 0, width, height)
+            ctx.strokeStyle = '#fff'
+            for (let row = 0; row < resolutionY; row++) {
+                const y = row * stepSizeY
+                ctx.beginPath()
+                ctx.moveTo(0, y);
+                for (let col = 0; col < resolutionX; col++) {
+                    const x = col * stepSizeX
+                    const value = getValueAtPoint(x, y)
+                    ctx.lineTo(x, y + value)
+                }
+                ctx.stroke()
+            }
+        }
+        document.addEventListener('mousedown', e => {
+            if (e.button === 0) {
+                waves.push({
+                    type: 'circle',
+                    source: {
+                        position: {
+                            x: e.clientX,
+                            y: e.clientY
+                        },
+                        amplitude: 20,
+                        waveLength: 70,
+                        period: 100
+                    },
+                    amplitude: 30,
+                    waveLength: 70,
+                    age: 0,
+                })
+            }
+            if (e.button === 2) {
+                waveSources.push({
+                    position: {
+                        x: e.clientX,
+                        y: e.clientY
+                    },
+                    type: 'circle',
+                    amplitude: 20,
+                    period: 100,
+                    waveLength: 100,
+                })
+            }
+        })
+        alert("Left click to create a wave, right click to create a wave source")
+        ctx.translate(0.5, 0.5);
+        const go = () => {
+            waveSources.forEach(createWave);
+            draw()
+            updateWaves()
+            time++
+        }
+        // setInterval(go, 100)
+        async function step() {
+            go()
+            window.requestAnimationFrame(step)
+        }
+        window.requestAnimationFrame(step)
+    </script>
+</body>
+
+</html>
