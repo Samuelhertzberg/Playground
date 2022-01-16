@@ -1,375 +1,489 @@
+<!DOCTYPE html>
 <html>
-    <!DOCTYPE html>
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System seeder</title>
+    <title>Syster Seeder</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
             color: black;
         }
-        .inputs {
+    
+        .inputContainer {
             position: absolute;
             top: 0;
+            right: 0;
+            margin: 20px;
+            color: lightgray;
+            width: 240px;
+            z-index: 1;
         }
-        .slidecontainer {
-            color: white
+    
+        .inputRow {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .displayNumber {
+            margin-left: 15px;
+            padding-right: 10px;
+            width: 10%;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            background: lightgray;
+            height: 3px;
+            border-radius: 5px;
+            margin-top: 15px;
+            box-shadow: 0 0 2px 1px lightgray;
+            width: 90%;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: black;
+            border: 1px solid lightgray;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 8px 1px lightgray;
+        }
+
+        .displayNumber {
+            align-self: center;
+        }
+
+        .tip {
+            color: gray
         }
     </style>
 </head>
 
 <body>
-    <canvas class="canvas">
-        <p>Your browser does not support canvas</p>
-    </canvas>
-    <div id="inputs" class="inputs">
-        <button onclick="seed()">Re-seed</button></br>
-        <div style="margin-top: 10px;">
-            <div class="slidecontainer">
-                <div>Matter cloud: size</div>
-                <input type="range" min="0" max="30" value="10" id="cloud-size-slider"></br>
-                <div>Matter cloud: rotation</div>
-                <input type="range" min="0" max="100" value="0" id="cloud-rotation-slider"></br>
-                <div>Matter cloud: # of bodies</div>
-                <input type="range" min="0" max="2000" value="100" id="cloud-population-slider"></br>
-                <div>Gravity amplifier</div>
-                <input type="range" min="0" max="15000" value="5000" id="gravity-slider"></br>
-                <div>Sim speed</div>
-                <input type="range" min="0" max="500" value="60" id="tick-slider"></br>
-            </div>
+    <div class="inputContainer">
+        <div class="inputLabel">Cloud Size</div>
+        <div class="inputRow">
+            <input type="range" min="1" max="100" value="50" class="slider" id="cloudSizeSlider">
+            <span id="cloudSizeSliderDisplay" class="displayNumber">50%</span>
         </div>
+        <div class="inputLabel">Number of Bodies</div>
+        <div class="inputRow">
+            <input type="range" min="1" max="100" value="50" class="slider" id="numberOfBodiesSlider">
+            <span id="numberOfBodiesSliderDisplay" class="displayNumber">50%</span>
+        </div>
+        <div class="inputLabel">Cloud Rotation Rate</div>
+        <div class="inputRow">
+            <input type="range" min="1" max="100" value="50" class="slider" id="cloudRotationSlider">
+            <span id="cloudRotationSliderDisplay" class="displayNumber">50%</span>
+        </div>
+        <div class="inputLabel">Gravity</div>
+        <div class="inputRow">
+            <input type="range" min="1" max="100" value="10" class="slider" id="gravitySlider">
+            <span id="gravitySliderDisplay" class="displayNumber">10%</span>
+        </div>
+        <div class="tip">Press 'r' to re-seed system</div>
     </div>
-    <script>
-        const canvas = document.querySelector('.canvas');
-        const width = canvas.width = window.innerWidth;
-        const height = canvas.height = window.innerHeight;
-        const ctx = canvas.getContext('2d');
-        
-        //Contants
-        const G = 6.674 * 10 **-11
-        
-        //User specified constants
-        let tickLength = 60
-        let gravityBoost = 5000
-        let rotateFactor = 0
-        let noBodies = 400
-        let cloudArea = width
-        
-        //Sliders
-        const cloudSizeSlider = document.getElementById("cloud-size-slider")
-        cloudSizeSlider.addEventListener("input",(e) => cloudArea = (cloudSizeSlider.value/10 * width))
-        const cloudRotationSlider = document.getElementById("cloud-rotation-slider")
-        cloudRotationSlider.addEventListener("input",(e) => rotateFactor = (cloudRotationSlider.value / 1000))
-        const cloudPopulationSlider = document.getElementById("cloud-population-slider")
-        cloudPopulationSlider.addEventListener("input",(e) => noBodies = (cloudPopulationSlider.value))
-        const gravitySlider = document.getElementById("gravity-slider")
-        gravitySlider.addEventListener("input",(e) => gravityBoost = gravitySlider.value)
-        const tickSlider = document.getElementById("tick-slider")
-        tickSlider.addEventListener("input",(e) => tickLength = tickSlider.value)
-
-        //Variables
-        let viewingWidth = width
-        let viewingHeight = height
-        let viewingCenter = [width/2, height/2]
+    <script src="../assets/matter.js" type="text/javascript"></script>
+    <script src="../assets/matter-attractors.js" type="text/javascript"></script>
+    <script >
+        const width = document.documentElement.clientWidth
+        const height = document.documentElement.clientHeight
         let dragRef = [-1, -1]
+        let focusedBody = undefined
+        let focusedBodyLocked = false
 
-        const getTickLength = () => tickLength
-        
-        const getLength = (vec) => Math.sqrt(vec[0] ** 2 + vec[1] ** 2)
-        
-        const getVec = (b1, b2) => [(b1.x - b2.x), (b1.y - b2.y)]
-        
-        const scaleVector = (vec, scale) => [vec[0] * scale, vec[1] * scale]
+        /* SETUP */
 
-        const scaleValue = (val, min, max, tgtMin, tgtMax) => {
-            val = val < min ? min : val
-            val = val > max ? max : val
-            val -= min
-            val = val / (max - min)
+        Matter.use(MatterAttractors);
+
+        // module aliases
+        var Engine = Matter.Engine,
+            Render = Matter.Render,
+            Runner = Matter.Runner,
+            Bodies = Matter.Bodies,
+            Body = Matter.Body,
+            Composite = Matter.Composite,
+            vector = Matter.Vector.create;
+
+        // create an engine
+        var engine = Engine.create();
+        engine.world.gravity.y = 0;
+
+        // create a renderer
+        var render = Render.create({
+            element: document.body,
+            engine: engine,
+            options: {
+                width,
+                height,
+                wireframes: false,
+                hasBounds: true
+            }
+        });
+
+        // The global body list
+        var bodies = []
+
+        //Max size of the cloud
+        var maxR = 1000
+
+        //Rotate speed of the cloud
+        var rotateFactor = 0.4
+
+        var numberOfBodies = 1000
+
+        var gravityConstant = 1
+
+
+
+
+
+
+
+        /* GETTERS */
+
+        /**
+         * @returns the combined masscenter of b1 and b2 {x, y}
+         */
+        const getMassCenter = (b1, b2) => ({
+            x: (b1.mass * b1.position.x + b2.mass * b2.position.x) / getFusedMass(b1, b2),
+            y: (b1.mass * b1.position.y + b2.mass * b2.position.y) / getFusedMass(b1, b2)
+        })
+
+        /**
+         * @returns the combined momentum of b1 and b2 {x, y}
+         */
+        const getFusedVelocity = (b1, b2) => ({
+            x: (b1.mass * b1.velocity.x + b2.mass * b2.velocity.x) / getFusedMass(b1, b2),
+            y: (b1.mass * b1.velocity.y + b2.mass * b2.velocity.y) / getFusedMass(b1, b2)
+        })
+
+        /**
+         * @returns the radius of the resulting body given a merger between b1 and b2
+         */
+        const getFusedRadius = (b1, b2) => Math.sqrt((b1.area + b2.area) / Math.PI)
+
+        /**
+         * @return the nobel price in mathematics
+         */
+        const getFusedMass = (b1, b2) => b1.mass + b2.mass
+
+        /**
+         *  Kind off hacky way to get the radii of a body. 
+         */
+        const getRadius = (body) => {
+            const { min, max } = body.bounds
+            return (max.x - min.x) / 2
+        }
+
+        /**
+         * @returns true if b1 and b2 are touching
+         */
+        const hasOverlap = (b1, b2) => {
+            const distSq = (b1.position.x - b2.position.x) ** 2 + (b1.position.y - b2.position.y) ** 2
+            const radiiSq = (getRadius(b1) + getRadius(b2)) ** 2
+            return distSq < radiiSq
+        }
+
+        /**
+         * @param unit an object with bounds, could be a body or the entire viewport
+         * @returns the dimensions of the unit {width, height}
+         */
+        const getBoundsDimensions = (unit) => ({
+            width: unit.bounds.max.x - unit.bounds.min.x,
+            height: unit.bounds.max.y - unit.bounds.min.y
+        })
+
+        const bodyExists = (b1) =>
+            Composite.allBodies(engine.world).findIndex(b2 => b1.id === b2.id) >= 0
+
+
+
+
+
+
+
+
+
+        /* SETTERS */
+
+        /**
+         *  Sets the focused body
+         *  @param newBody The new body to focus on
+         */
+        const setFocusedBody = (newBody) => {
+            if (!focusedBodyLocked) {
+                focusedBody = newBody
+                focusedBodyLocked = true
+                setTimeout(() => {
+                    focusedBodyLocked = false
+                }, 1000);
+            }
+        }
+
+        /**
+         * Updates the global body collection when two bodies collide
+         * @param bodyA one of the bodies that collided 
+         * @param bodyB the other body that collided
+         */
+        const collide = ({ bodyA, bodyB }) => {
+            if (bodyExists(bodyA) && bodyExists(bodyA)) {
+                const newBody = fuseBodies(bodyA, bodyB)
+                Matter.World.remove(engine.world, bodyA);
+                Matter.World.remove(engine.world, bodyB);
+                Matter.World.add(engine.world, newBody)
+                if (bodyA.id === focusedBody?.id || bodyB.id === focusedBody?.id) {
+                    focusedBody = newBody
+                }
+            }
+        }
+
+        const applyGravityForces = (b1, b2) => {
+            if (!hasOverlap(b1, b2)) {
+                MatterAttractors.Attractors.gravity(b1, b2)
+            }
+        }
+
+        const init = (bodyCollection) => {
+            for (let i = 0; i < numberOfBodies; i++) {
+                const randAngle = Math.random() * 2 * Math.PI
+                const r = maxR * Math.sqrt(Math.random())
+                const x = Math.cos(randAngle) * r + width / 2
+                const y = Math.sin(randAngle) * r + height / 2
+                const a = Math.atan2(height / 2 - y, width / 2 - x,) - Math.PI / 2
+                const xDir = Math.cos(a) * rotateFactor * r / maxR
+                const yDir = Math.sin(a) * rotateFactor * r / maxR
+                const size = 1
+                const mass = 1
+                bodyCollection.push(createBody({ x, y }, size, mass, vector(xDir, yDir)))
+            }
+        }
+
+        /**
+         *  Centers the viewport on the focused body, if any.
+         */
+        const lookAtFocusedBody = () => {
+            if (focusedBody) {
+                const renderDims = getBoundsDimensions(render)
+                const bodyDims = getBoundsDimensions(focusedBody)
+                const xPadding = (renderDims.width - bodyDims.width) / 2
+                const yPadding = (renderDims.height - bodyDims.height) / 2
+                Render.lookAt(render, focusedBody, vector(xPadding, yPadding))
+            }
+        }
+
+
+
+
+
+
+
+
+
+        /* FACTORIES */
+
+        /**
+         *  Creates a new body and adds it to the engine.
+         *  @param position The position of the new body {x, y}
+         *  @param radius The radius of the body
+         *  @param mass The mass of the body
+         *  @param velocity The velocity of the body
+         *  @returns The new body
+         */
+        const createBody = (position, radius, mass, velocity) => {
+            const body = Matter.Bodies.circle(
+                position.x,
+                position.y,
+                radius,
+                { 
+                    plugin: { attractors: [applyGravityForces] },
+                }
+            )
+            body.frictionAir = 0
+            body.friction = 0
+            Body.setMass(body, mass)
+            Body.setVelocity(body, velocity)
+            body.render.fillStyle = "#ffffff" //TODO: All bodies are colored white :/
+            return body
+        }
+
+        /**
+         * @returns the resulting body of a merger between b1 and b2
+         */
+        const fuseBodies = (b1, b2) => createBody(
+            getMassCenter(b1, b2),
+            getFusedRadius(b1, b2),
+            getFusedMass(b1, b2),
+            getFusedVelocity(b1, b2)
+        )
+
+
+
+
+
+
+
+
+
+        /* LISTENERS */
+
+        /**
+         *  Zooms in and out.
+         */
+        document.addEventListener('wheel', e => {
+            const d = e.wheelDelta
+            const renderDim = getBoundsDimensions(render)
+            const zoom = 15 * width / renderDim.width
+            const aspectRatio = (width / height)
+            const xOffset = e.offsetX / width
+            const yOffset = e.offsetY / height
+            const xZoomOffset = focusedBody ? [0.5, 0.5] : [xOffset, 1 - xOffset]
+            const yZoomOffset = focusedBody ? [0.5, 0.5] : [yOffset, 1 - yOffset]
+            render.bounds.min.x = render.bounds.min.x - d * aspectRatio * (1 / zoom) * xZoomOffset[0]
+            render.bounds.max.x = render.bounds.max.x + d * aspectRatio * (1 / zoom) * xZoomOffset[1]
+            render.bounds.min.y = render.bounds.min.y - d * (1 / zoom) * yZoomOffset[0]
+            render.bounds.max.y = render.bounds.max.y + d * (1 / zoom) * yZoomOffset[1]
+        })
+
+
+        document.addEventListener('mousedown', e => {
+            dragRef = [e.clientX, e.clientY]
+        })
+
+        document.addEventListener('mouseup', e => {
+            dragRef = [-1, -1]
+        })
+
+        /**
+         * Pans the viewport, if the dragRef is set.
+         */
+        document.addEventListener('mousemove', e => {
+            if (dragRef[0] > 0 && dragRef[1] > 0) {
+                const dx = e.clientX - dragRef[0]
+                const dy = e.clientY - dragRef[1]
+                const multiplier = getBoundsDimensions(render).width / width
+                render.bounds.min.x = render.bounds.min.x - dx * multiplier
+                render.bounds.max.x = render.bounds.max.x - dx * multiplier
+                render.bounds.min.y = render.bounds.min.y - dy * multiplier
+                render.bounds.max.y = render.bounds.max.y - dy * multiplier
+                dragRef = [e.clientX, e.clientY]
+                setFocusedBody(undefined) //Unsets the focused body, unlocking the viewport
+            }
+        })
+
+        document.addEventListener('keydown', e => {
+            if (e.code === "Space") { //pauses the simulation
+                runner.enabled = !runner.enabled
+            }
+            switch (e.code) {
+                case "Space":
+                    runner.enabled = !runner.enabled
+                    break;
+                case "KeyR":
+                    bodies = []
+                    init(bodies)
+                    engine.world.bodies = []
+                    Composite.add(engine.world, bodies);
+                    //TODO reset viewport
+                    break;
+                default:
+                    break;
+            }
+        })
+
+        Matter.Events.on(engine, 'collisionStart', ({ pairs }) => {
+            pairs.forEach(collide);
+        });
+
+        var mouseConstraint = Matter.MouseConstraint.create(engine)
+
+        /**
+         * Queries the engine for the bodies that are under the mouse and sets the focused body.
+         */
+        Matter.Events.on(mouseConstraint, 'mousedown', (e) => {
+            const zoom = getBoundsDimensions(render).width / width
+            const clickedPoint = {
+                x: (e.mouse.position.x * (zoom) + render.bounds.min.x),
+                y: (e.mouse.position.y * (zoom) + render.bounds.min.y)
+            }
+            let a = Matter.Query.point(Composite.allBodies(engine.world), clickedPoint)
+            if (a.length > 0) {
+                setFocusedBody(a[0])
+                runner.enabled = true
+            }
+        });
+        
+        Matter.Events.on(engine, 'afterUpdate', lookAtFocusedBody);
+
+
+
+
+
+
+
+        /* INITIALIZATION */
+
+        // Populate the list of bodies
+        init(bodies)
+
+        // add all of the bodies to the world
+        Composite.add(engine.world, bodies);
+
+        // run the renderer
+        Render.run(render);
+
+        // create runner
+        var runner = Runner.create();
+
+        // run the engine
+        Runner.run(runner, engine); 1
+
+
+
+
+
+        /* INPUT HANDLERS */
+
+        const createHandler = (id, setter) => {
+            const input = document.getElementById(id)
+            input.addEventListener("input", (e) => {
+                dragRef = [-1, -1]
+                setter(input.value)
+                const inputLabel = document.getElementById(id + "Display")
+                inputLabel.innerHTML = input.value + "%"
+                e.preventDefault()
+            })
+        }
+
+        const scaleValue = (val, tgtMin, tgtMax) => {
+            val = Math.max(1, val)
+            val = Math.min(100, val)
+            val -= 1
+            val = val / 99
             if (tgtMin !== undefined && tgtMax !== undefined) {
                 return (tgtMax - tgtMin) * val + tgtMin
             }
             return val
         }
-        
-        const getAngle = (vec) => Math.atan2(vec[1], vec[0])
 
-        const getMassCenter = (b1, b2) => {
-            let c = scaleVector(getVec(b2, b1), (b2.m/(b1.m+b2.m)))
-            return [b1.x + c[0], b1.y + c[1]]
-        }
-
-        const getBodyInteraction = (b1, b2) => {
-            if (b1.id !== b2.id) {
-                let vec = getVec(b1, b2)
-                let r = getLength(vec)
-                let f = (G * (b1.m * b2.m) / r ** 2) * gravityBoost
-                let a = getAngle(vec)
-                return [Math.cos(a) * f, Math.sin(a) * f]
-            }
-            return [0,0]
-        }
-
-        const getGravityVectors = () => {
-            let forces = new Array(bodies.length).fill([0,0]);
-            let collisions = []
-            bodies.forEach((b1,b1i) => {
-                for (let b2i = b1i + 1; b2i < bodies.length; b2i++) {
-                    const b2 = bodies[b2i];
-                    const gVec = getBodyInteraction(b1, b2)
-                    forces[b1i] = [forces[b1i][0] - gVec[0], forces[b1i][1] - gVec[1]]
-                    forces[b2i] = [forces[b2i][0] + gVec[0], forces[b2i][1] + gVec[1]]
-                    collisions = checkCollision(b1, b2, collisions)
-                }
-            })
-            return [forces, collisions]
-        }
-
-        const moveBodies = () => {
-            let xDirSum = 0
-            let yDirSum = 0
-            bodies.forEach((body, i) => {
-                bodies[i] = {...body, x: body.x + body.xDir * getTickLength(), y: body.y + body.yDir * getTickLength()}
-                 if (bodies[i].focused)
-                    viewingCenter = [bodies[i].x, bodies[i].y]
-            });
-        }
-
-        const accelerateBody = (body, f) => {
-            let ax = f[0] / body.m
-            let ay = f[1] / body.m
-            let dvx = ax *= getTickLength()
-            let dvy = ay *= getTickLength()
-            let newBody = { ...body, xDir: body.xDir + dvx, yDir: body.yDir + dvy }
-            return newBody
-        }
-        
-        const updateBodies = () => {
-            let [forces, collisions] = getGravityVectors()
-            forces.forEach((f, i) => {
-                let newBody = accelerateBody(bodies[i], f)
-                bodies[i] = newBody
-            })
-            performCollisions(collisions)
-        }
-
-        const checkCollision = (b1, b2, collisions) => {
-            if(b1.id !== b2.id && getLength(getVec(b1, b2)) < (b1.r + b2.r)){
-                collisions = addCollision(collisions, b1, b2)
-            }
-            return collisions
-        }
-
-        const addCollision = (collisions, b1, b2) => {
-            for (let i = 0; i < collisions.length; i++) {
-                if (collisions[i].has(b1.id) || collisions[i].has(b2.id)) {
-                    collisions[i].add(b1.id)
-                    collisions[i].add(b2.id)
-                    return collisions
-                }
-            }
-            let newCol = new Set()
-            newCol.add(b1.id)
-            newCol.add(b2.id)
-            collisions.push(newCol)
-            return collisions
-        }
-
-        const performCollisions = (collisions) => {
-            collisions.forEach(collision => {
-                let bodiesToCollide = Array.from(collision)
-                    .map(id => bodies.find(b => b.id == id))
-                let newBody = bodiesToCollide.reduce((acc, body) => performCollision(acc, body))
-                collision.forEach(id => {
-                    let i = bodies.findIndex(b => b.id == id)
-                    bodies.splice(i, 1)
-                });
-                bodies.push(newBody)
-            });
-        }
-
-        const performCollision = (b1, b2) => {
-            let newM = b1.m + b2.m
-            let newPos = getMassCenter(b1, b2)
-            let newxDir = (b1.m*b1.xDir + b2.m * b2.xDir)/newM
-            let newyDir = (b1.m*b1.yDir + b2.m * b2.yDir)/newM
-            let newR = Math.sqrt(b1.r ** 2 + b2.r ** 2)
-            let newColor = "rgb(255,255,255)" //TODO
-            let newBody = { x: newPos[0], y: newPos[1], xDir: newxDir, yDir: newyDir, r: newR, color: newColor, m: newM, focused: (b1.focused || b2.focused), id: b1.id}
-            return newBody
-        }
-
-        const zoom = (scale, ex, ey) => {
-            const zoomFactor = width/viewingWidth
-            let [viewX, viewY] = viewingCenter
-            const centerOffset = [(width / 2 - ex)/2, (height / 2 - ey)/2]
-            viewX -= centerOffset[0] * (scale - 1) * zoomFactor
-            viewY -= centerOffset[1] * (scale - 1) * zoomFactor
-
-            viewingWidth = viewingWidth * 1/scale
-            viewingHeight = viewingHeight * 1/scale
-            viewingCenter = [viewX, viewY]
-        }
-
-        const traverse = (vec) => {
-            const zoom = width/viewingWidth
-            viewingCenter = [viewingCenter[0] + vec[0] * (1 / zoom), viewingCenter[1] + vec[1] * (1 / zoom)]
-        }
-
-        const toRealCoord = (viewX, viewY) => {
-            const zoom = width / viewingWidth
-            let realX = (viewX/zoom) + (viewingCenter[0] - viewingWidth / 2)
-            let realY = (viewY/zoom) + (viewingCenter[1] - viewingHeight / 2)
-            return [realX, realY]
-        }
-
-        const toViewCoord = (realX, realY) => {
-            const zoom = width / viewingWidth
-            const viewX = (realX - (viewingCenter[0] - viewingWidth / 2)) * zoom
-            const viewY = (realY - (viewingCenter[1] - viewingHeight / 2)) * zoom
-            return [viewX, viewY]
-        }
-
-        const focusBody = (b) => {
-            bodies.forEach((body,i ) => {
-                if(body.id === b.id)
-                    bodies[i].focused = true
-                else
-                    bodies[i].focused = false
-            });
-        }
-
-        const getFocusedBody = () => {
-            bodies.forEach(body => {
-                if(body.focused)
-                    return body
-            })
-            return
-        }
-
-        const bodyInViewingBounds = (body) => {
-            const inViewingBoundsX = (viewingCenter[0] - viewingWidth/2 - body.r) < body.x && body.x < (viewingCenter[0] + viewingWidth / 2 + body.r)
-            const inViewingBoundsY = (viewingCenter[1] - viewingHeight/2 - body.r) < body.y && body.y < (viewingCenter[1] + viewingHeight / 2 + body.r)
-            return inViewingBoundsX && inViewingBoundsY
-        } 
-
-        const draw = () => {
-            ctx.fillStyle = `rgb(0,0,0)`;
-            ctx.fillRect(0, 0, width, height);
-            bodies.forEach(body => {
-                if(bodyInViewingBounds(body)){
-                    const zoom = width / viewingWidth
-                    let viewX, viewY
-                    [viewX, viewY] = toViewCoord(body.x, body.y)
-                    ctx.beginPath()
-                    ctx.fillStyle = body.color
-                    ctx.strokeStyle = body.color
-                    ctx.arc(viewX, viewY, body.r * zoom, 0, 2 * Math.PI)
-                    ctx.fill()
-                }
-            });
-        }
-
-        const seed = () => {
-            bodies = []
-            viewingCenter = [width/2, height/2]
-            for (let i = 0; i < noBodies; i++) {
-                let maxR = cloudArea
-                let randAngle = Math.random() * 2 * Math.PI
-                let r = maxR * Math.sqrt(Math.random())
-                let x = Math.cos(randAngle) * r + width / 2
-                let y = Math.sin(randAngle) * r + height / 2
-                let a = getAngle([width / 2 - x, height / 2 - y])
-                a = a - Math.PI / 2
-                bodies.push({
-                    x: x,
-                    y: y,
-                    xDir: Math.cos(a) * rotateFactor * r / maxR,
-                    yDir: Math.sin(a) * rotateFactor * r / maxR,
-                    m: 500 + Math.random() * 5000,
-                    r: 1,
-                    color: 'rgb(255,255,255)',
-                    focused: false,
-                    id: i
-                })
-            }
-        }
-
-        canvas.addEventListener('wheel', e => {
-            let d = e.wheelDelta
-            d = scaleValue(d, -2000, 2000, 1.2, 0.8)
-            zoom(d, e.clientX, e.clientY)
+        createHandler("cloudSizeSlider", (val) => {
+            maxR = scaleValue(val, 100, 2000)
         })
-
-        document.addEventListener('keydown', e => {
-            if(e.key === "ArrowDown" && getTickLength() > 0)
-                tickLength -= 1
-            if(e.key === "ArrowUp")
-                tickLength += 1
-            if(e.key === " ")
-                logTimes()
+        createHandler("numberOfBodiesSlider", (val) => {
+            numberOfBodies = scaleValue(val, 3, 2000)
         })
-        canvas.addEventListener('click', e => {
-            let realCoord = toRealCoord(e.clientX, e.clientY)
-            let virtBody = {x: realCoord[0], y: realCoord[1]}
-            bodies.forEach(body => {
-                if(getLength(getVec(virtBody, body)) < body.r * (body.r < 5 ? 2: 1)){
-                    focusBody(body)
-                }
-            });
+        createHandler("cloudRotationSlider", (val) => {
+            rotateFactor = scaleValue(val, 0, 1)
         })
-
-        canvas.addEventListener('mousedown', e => {
-            dragRef = [e.clientX, e.clientY]
+        createHandler("gravitySlider", (val) => {
+            MatterAttractors.Attractors.gravityConstant = scaleValue(val, 0, 0.01)
         })
-
-        canvas.addEventListener('mouseup', e => {
-            dragRef = [-1, -1]
-        })
-        canvas.addEventListener('mousemove', e => {
-            if(dragRef[0] > 0 && dragRef[1] > 0){
-                const dx = e.clientX - dragRef[0]
-                const dy = e.clientY - dragRef[1]
-                viewingCenter[0] = viewingCenter[0] - dx
-                viewingCenter[1] = viewingCenter[1] - dy
-                dragRef[0] = e.clientX
-                dragRef[1] = e.clientY
-            }
-        })
-
-        const maxTimes = 100
-        const times = {}
-        const time = (f, args, lbl) => {
-            const title = lbl ? lbl : f.name
-            if(!(title in times))
-                times[title] = []
-            const  t = new Date()
-            const ret = args ? f(...args) : f()
-            times[title].push((new Date() - t))
-            return ret
-        }
-        const logTimes = () => {
-            Object.keys(times).forEach(funcName => {
-                const sum = times[funcName].reduce((a, b) => a + b, 0);
-                const avg = (sum / times[funcName].length) || 0;
-                console.log(`${funcName}: \t avg:${Math.round(avg*100)/100} \t tot:${sum}`);
-            })
-        }
-
-        seed()
-
-        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-        async function step() {
-            updateBodies()
-            moveBodies()
-            draw()
-            window.requestAnimationFrame(step)
-        }
-        window.requestAnimationFrame(step)
 
     </script>
 </body>
