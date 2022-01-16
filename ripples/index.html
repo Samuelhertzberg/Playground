@@ -100,12 +100,29 @@
             return value
         }
 
-        const draw = () => {
+        const getDirectedValueAtPoint = (x, y) => {
+            let value = [0, 0]
+            for (let i = 0; i < waves.length; i++) {
+                const wave = waves[i]
+                const posInWave = isInWave({ x, y }, wave)
+                if (posInWave > 0) {
+                    const angle = Math.atan2(y - wave.source.position.y, x - wave.source.position.x)
+                    value[0] += Math.cos(angle) * Math.sin(posInWave * 2 * Math.PI) * wave.amplitude
+                    value[1] += Math.sin(angle) * Math.sin(posInWave * 2 * Math.PI) * wave.amplitude
+                }
+            }
+            return {x: value[0], y: value[1]}
+            
+        }
+
+        const drawCurves = () => {
             // getValueAtPoint(width / 2 - 100, height / 2)
             ctx.clearRect(0, 0, width, height)
             ctx.fillStyle = '#000'
             ctx.fillRect(0, 0, width, height)
             ctx.strokeStyle = '#fff'
+            ctx.lineWidth = 1.5
+            ctx.lineCap = 'round'
             for (let row = 0; row < resolutionY; row++) {
                 const y = row * stepSizeY
                 ctx.beginPath()
@@ -118,6 +135,51 @@
                 ctx.stroke()
             }
         }
+
+        const drawVectors = () => {
+            // getValueAtPoint(width / 2 - 100, height / 2)
+            ctx.clearRect(0, 0, width, height)
+            ctx.fillStyle = '#000'
+            ctx.fillRect(0, 0, width, height)
+            ctx.strokeStyle = '#fff'
+            ctx.lineWidth = 1.5
+            ctx.lineCap = 'round'
+            for (let row = 0; row < resolutionY; row++) {
+                const y = row * stepSizeY
+                ctx.beginPath()
+                for (let col = 0; col < resolutionX; col++) {
+                    const x = col * stepSizeX
+                    const value = getValueAtPoint(x, y)
+                    const vector = getDirectedValueAtPoint(x, y)
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + vector.x, y + vector.y)
+                }
+                ctx.stroke()
+            }
+        }
+
+        const drawDots = () => {
+            // getValueAtPoint(width / 2 - 100, height / 2)
+            ctx.clearRect(0, 0, width, height)
+            ctx.fillStyle = '#000'
+            ctx.fillRect(0, 0, width, height)
+            ctx.fillStyle = '#fff'
+            for (let row = 0; row < resolutionY; row++) {
+                const y = row * stepSizeY
+                ctx.beginPath()
+                for (let col = 0; col < resolutionX; col++) {
+                    const x = col * stepSizeX
+                    let value = getValueAtPoint(x, y)
+                    value = scaleValue(value, -20, 20, 0, 10)
+                    ctx.moveTo(x, y);
+                    ctx.beginPath()
+                    ctx.arc(x, y, Math.max(0, value), 0, Math.PI * 2)
+                    ctx.fill()
+                }
+            }
+        }
+
+
         document.addEventListener('mousedown', e => {
             if (e.button === 0) {
                 waves.push({
@@ -153,7 +215,7 @@
         ctx.translate(0.5, 0.5);
         const go = () => {
             waveSources.forEach(createWave);
-            draw()
+            drawCurves()
             updateWaves()
             time++
         }
