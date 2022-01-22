@@ -18,3 +18,5 @@ This is my collection of very short projects that I do for fun.
 
 [Ripples](https://samuelhertzberg.github.io/Playground/ripples/)
 
+[Wordle Solver](https://samuelhertzberg.github.io/Playground/wordleSolver/)
+
