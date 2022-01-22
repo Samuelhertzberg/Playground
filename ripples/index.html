@@ -55,7 +55,7 @@
             waves.forEach((wave, i) => {
                 wave.age++
                 wave.amplitude = calcWaveAmplitude(wave)
-                if(wave.amplitude < cutoff || wave.age*propagationSpeed > width *1.5) {
+                if(wave.amplitude < cutoff || wave.age*propagationSpeed > max(width, height) *1.5) {
                     toRemove.push(i)
                 }
             })
@@ -250,7 +250,7 @@
         ctx.translate(0.5, 0.5);
         const go = () => {
             waveSources.forEach(createWave);
-            drawCurvesTrans()
+            drawCurves()
             updateWaves()
             time++
         }
