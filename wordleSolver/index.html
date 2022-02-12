@@ -122,7 +122,7 @@
 
         const applyLatestResult = (result) => {
             const tempFilters = new Array(5).fill().map(() => new Set('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')))
-            const tempMustHaves = new Array(5).fill()
+            const tempMustHaves = []
             result.forEach(({letter, result: r}, li) => {
                 if(r == 0){ //Letter is not in the word (if not specified elsewere, in that case it is just not on this position)
                     const letterYellow = result.some((r) => r.letter === letter && r.result === 1)
@@ -140,7 +140,7 @@
                     if(tempFilters[li].size > 1){ //This should not happen, user error most likely.
                         tempFilters[li].delete(letter)
                     }
-                    tempMustHaves[li] = letter
+                    tempMustHaves.push(letter)
                 } else { //Letter is in the word and on this position
                     tempFilters[li] = new Set([letter])
                 }
@@ -186,6 +186,8 @@
         //Intersect between filter from latest results and filter from all results
         const lockLatestResults = () => {
             filters = intersectFilters(filters, currentFilters)
+            mustHaves = currentMustHaves.concat(mustHaves.filter(l => l))
+            mustHaves = [...new Set(mustHaves)]
         }
 
         //Each letter in the word is a clickable box
