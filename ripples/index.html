@@ -55,7 +55,7 @@
             waves.forEach((wave, i) => {
                 wave.age++
                 wave.amplitude = calcWaveAmplitude(wave)
-                if(wave.amplitude < cutoff || wave.age*propagationSpeed > max(width, height) *1.5) {
+                if(wave.amplitude < cutoff || wave.age*propagationSpeed > Math.max(width, height) *1.5) {
                     toRemove.push(i)
                 }
             })
