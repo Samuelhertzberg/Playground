@@ -20,3 +20,5 @@ This is my collection of very short projects that I do for fun.
 
 [Wordle Solver](https://samuelhertzberg.github.io/Playground/wordleSolver/)
 
+[Propagation](https://samuelhertzberg.github.io/Playground/propagation/)
+
