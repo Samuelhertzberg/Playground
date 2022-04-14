@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propagation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas class="canvas">
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <script>
+        const canvas = document.querySelector('.canvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width = window.innerWidth;
+        const height = canvas.height = window.innerHeight;
+        const edgeLength = 20
+        const nodesPerRow = Math.floor(width / edgeLength)
+        const rows = Math.floor(height / edgeLength)
+        const nodeSize = 10
+        const nodes = []
+        const standardRigidity = 0.01
+        const stickiness = 0.001
+        const friction = 0.03
+        let currentDrawMethod = 0
+
+        const addNode = (x, y) => {
+            const xCoord = (x + 1) * (width / (nodesPerRow + 1))
+            const yCoord = (y + 1) * (height / (rows + 1))
+            const node = {
+                x: xCoord,
+                y: yCoord,
+                orgX: xCoord,
+                orgY: yCoord,
+                xVel: 0,
+                yVel: 0,
+                indexX: x,
+                indexY: y,
+                rigidity: standardRigidity,
+                extraSpace: 0,
+            }
+            nodes.push(node)
+        }
+
+        const addNodes = () => {
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < nodesPerRow; x++) {
+                    addNode(x, y)
+                }
+            }
+        }
+
+        const getNodeNeighbours = (node) => {
+            const neighbours = []
+            const x = node.indexX
+            const y = node.indexY
+            if (x > 0) {
+                neighbours.push(nodes[(y * nodesPerRow) + (x - 1)])
+            }
+            if (x < nodesPerRow - 1) {
+                neighbours.push(nodes[(y * nodesPerRow) + (x + 1)])
+            }
+            if (y > 0) {
+                neighbours.push(nodes[((y - 1) * nodesPerRow) + x])
+            }
+            if (y < rows - 1) {
+                neighbours.push(nodes[((y + 1) * nodesPerRow) + x])
+            }
+            return neighbours
+        }
+
+        const calculateForceVector = (node, neighbours) => {
+            const forceVector = {
+                x: 0,
+                y: 0
+            }
+            neighbours.forEach(neighbour => {
+                let xOptimal = neighbour.indexX != node.indexX ? edgeLength + neighbour.extraSpace : 0
+                let yOptimal = neighbour.indexY != node.indexY ? edgeLength + neighbour.extraSpace : 0
+                const xDiff = node.x - neighbour.x
+                const yDiff = node.y - neighbour.y
+                forceVector.x += -Math.sign(xDiff) * (Math.abs(xDiff) - xOptimal) * (neighbour.rigidity + node.rigidity)
+                forceVector.y += -Math.sign(yDiff) * (Math.abs(yDiff) - yOptimal) * (neighbour.rigidity + node.rigidity)
+            })
+            const originXDiff = node.x - node.orgX
+            const originYDiff = node.y - node.orgY
+            forceVector.x += -originXDiff * stickiness
+            forceVector.y += -originYDiff * stickiness
+
+            return forceVector
+        }
+
+        const updateNodeVelocities = () => {
+            nodes.forEach(node => {
+                const neighbours = getNodeNeighbours(node)
+                const forceVector = calculateForceVector(node, neighbours)
+                node.xVel += forceVector.x
+                node.yVel += forceVector.y
+            })
+        }
+
+        const moveNodes = () => {
+            nodes.forEach(node => {
+                node.x += node.xVel
+                node.y += node.yVel
+                node.xVel *= (1 - friction)
+                node.yVel *= (1 - friction)
+                node.extraSpace = node.extraSpace > 0 ? node.extraSpace - 1 : 0
+            })
+        }
+
+        const clearCanvas = () => {
+            ctx.clearRect(0, 0, width, height)
+        }
+
+        const drawAsCircle = (node) => {
+            ctx.fillStyle = '#000'
+            ctx.beginPath()
+            ctx.arc(node.x, node.y, nodeSize, 0, 2 * Math.PI)
+            ctx.fill()
+        }
+
+        const drawAsRectangle = (node) => {
+            ctx.fillStyle = '#000'
+            ctx.fillRect(node.x - nodeSize, node.y - nodeSize, nodeSize*2 + 1, nodeSize*2 + 1)
+        }
+
+        const drawAsColor = (node) => {
+            const speed = Math.sqrt(node.xVel * node.xVel + node.yVel * node.yVel)
+            const v = scaleValue(speed, 0, 1, 0, 255)
+            const red = 255
+            const green = 255 - v
+            const blue = 255 - v
+            ctx.fillStyle = 'rgb(' + red + ',' + green + ',' + blue + ')'
+            // ctx.fillRect(node.orgX - nodeSize, node.orgY - nodeSize, nodeSize * 2 + 1, nodeSize * 2 + 1)
+            ctx.beginPath()
+            ctx.arc(node.orgX - nodeSize, node.orgY - nodeSize, nodeSize, 0, 2 * Math.PI)
+            ctx.fill()
+        }
+
+        const drawAsVector = (node) => {
+            ctx.strokeStyle = '#000'
+            ctx.beginPath()
+            ctx.moveTo(node.orgX, node.orgY)
+            const xDiff = node.x - node.orgX
+            const yDiff = node.y - node.orgY
+            ctx.lineTo(node.orgX + xDiff * 2, node.orgY + yDiff * 2)
+            ctx.stroke()
+        }
+
+        const drawAsSizes = (node) => {
+            const speed = Math.sqrt(node.xVel * node.xVel + node.yVel * node.yVel)
+            const size = scaleValue(speed, 0, 1, 0, 10)
+            ctx.fillStyle = '#000'
+            ctx.beginPath()
+            ctx.arc(node.orgX, node.orgY, size, 0, 2 * Math.PI)
+            ctx.fill()
+        }
+
+        const drawMethods = [drawAsCircle, drawAsRectangle, drawAsColor, drawAsVector, drawAsSizes]
+
+        const scaleValue = (value, min, max, newMin=0, newMax=1) => {
+            value = Math.max(min, value)
+            value = Math.min(max, value)
+            return ((value - min) / (max - min)) * (newMax - newMin) + newMin
+        }
+        
+
+
+        const drawGrid = () => {
+            nodes.forEach(node => {
+                const neighbours = getNodeNeighbours(node)
+                neighbours.forEach(neighbour => {
+                    ctx.beginPath()
+                    ctx.moveTo(node.x, node.y)
+                    ctx.lineTo(neighbour.x, neighbour.y)
+                    ctx.stroke()
+                })
+            })
+        }
+
+        const drawNodes = () => {
+            clearCanvas()
+            // drawGrid()
+            // nodes.forEach(drawAsCircle)
+            nodes.forEach(drawMethods[currentDrawMethod])
+        }
+
+        const step = () => {
+            updateNodeVelocities()
+            moveNodes()
+            drawNodes()
+        }
+        addNodes()
+        async function go(){
+            step()
+            window.requestAnimationFrame(go)
+        }
+        window.requestAnimationFrame(go)
+        step()
+
+        //Catch mouse over body
+        document.body.addEventListener('mousemove', (e) => {
+            const x = e.clientX
+            const y = e.clientY
+            const xi = Math.floor(x / edgeLength)
+            const yi = Math.floor(y / edgeLength)
+            const i = (yi * nodesPerRow) + xi
+            nodes[i].extraSpace = nodes[i].extraSpace < 30 ? nodes[i].extraSpace + 6 : 30
+        })
+
+        //On click body
+        document.body.addEventListener('click', (e) => {
+            currentDrawMethod = (currentDrawMethod + 1) % drawMethods.length
+        })
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+
+</html>
