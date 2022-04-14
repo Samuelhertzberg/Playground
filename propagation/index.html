@@ -129,44 +129,59 @@
             ctx.fill()
         }
 
-        const drawAsRectangle = (node) => {
+        const drawAsCircles = () => {
             ctx.fillStyle = '#000'
-            ctx.fillRect(node.x - nodeSize, node.y - nodeSize, nodeSize*2 + 1, nodeSize*2 + 1)
-        }
-
-        const drawAsColor = (node) => {
-            const speed = Math.sqrt(node.xVel * node.xVel + node.yVel * node.yVel)
-            const v = scaleValue(speed, 0, 1, 0, 255)
-            const red = 255
-            const green = 255 - v
-            const blue = 255 - v
-            ctx.fillStyle = 'rgb(' + red + ',' + green + ',' + blue + ')'
-            // ctx.fillRect(node.orgX - nodeSize, node.orgY - nodeSize, nodeSize * 2 + 1, nodeSize * 2 + 1)
             ctx.beginPath()
-            ctx.arc(node.orgX - nodeSize, node.orgY - nodeSize, nodeSize, 0, 2 * Math.PI)
+            nodes.forEach(node => {
+                ctx.moveTo(node.x + nodeSize, node.y)
+                ctx.arc(node.x, node.y, nodeSize, 0, 2 * Math.PI)
+            })
             ctx.fill()
         }
 
-        const drawAsVector = (node) => {
+        const drawAsRectangles = () => {
+            ctx.fillStyle = '#000'
+            nodes.forEach(node => {
+                ctx.fillRect(node.x - nodeSize, node.y - nodeSize, nodeSize*2 + 1, nodeSize*2 + 1)
+            })
+        }
+
+        const drawAsColors = () => {
+            nodes.forEach(node => {
+                const speed = Math.sqrt(node.xVel * node.xVel + node.yVel * node.yVel)
+                const color = scaleValue(speed, 0, 2, 255, 0)
+                ctx.beginPath()
+                ctx.fillStyle = `rgb(${255}, ${color}, ${color})`
+                ctx.arc(node.orgX, node.orgY, nodeSize, 0, 2 * Math.PI)
+                ctx.fill()
+            })
+        }
+
+        const drawAsVectors = () => {
             ctx.strokeStyle = '#000'
             ctx.beginPath()
-            ctx.moveTo(node.orgX, node.orgY)
-            const xDiff = node.x - node.orgX
-            const yDiff = node.y - node.orgY
-            ctx.lineTo(node.orgX + xDiff * 2, node.orgY + yDiff * 2)
+            nodes.forEach(node => {
+                ctx.moveTo(node.orgX, node.orgY)
+                const xDiff = node.x - node.orgX
+                const yDiff = node.y - node.orgY
+                ctx.lineTo(node.orgX + xDiff * 2, node.orgY + yDiff * 2)
+            })
             ctx.stroke()
         }
 
-        const drawAsSizes = (node) => {
-            const speed = Math.sqrt(node.xVel * node.xVel + node.yVel * node.yVel)
-            const size = scaleValue(speed, 0, 1, 0, 10)
-            ctx.fillStyle = '#000'
+        const drawAsSizes = () => {
             ctx.beginPath()
-            ctx.arc(node.orgX, node.orgY, size, 0, 2 * Math.PI)
+            ctx.fillStyle = '#000'
+            nodes.forEach(node => {
+                const speed = Math.sqrt(node.xVel * node.xVel + node.yVel * node.yVel)
+                const size = scaleValue(speed, 0, 1, 0, 10)
+                ctx.moveTo(node.orgX + size, node.orgY)
+                ctx.arc(node.orgX, node.orgY, size, 0, 2 * Math.PI)
+            })
             ctx.fill()
         }
 
-        const drawMethods = [drawAsCircle, drawAsRectangle, drawAsColor, drawAsVector, drawAsSizes]
+        const drawMethods = [drawAsCircles, drawAsRectangles, drawAsColors, drawAsVectors, drawAsSizes]
 
         const scaleValue = (value, min, max, newMin=0, newMax=1) => {
             value = Math.max(min, value)
@@ -191,14 +206,19 @@
         const drawNodes = () => {
             clearCanvas()
             // drawGrid()
-            // nodes.forEach(drawAsCircle)
-            nodes.forEach(drawMethods[currentDrawMethod])
+            drawMethods[currentDrawMethod]()
         }
-
+        let times = []
         const step = () => {
+            const t = performance.now()
             updateNodeVelocities()
             moveNodes()
             drawNodes()
+            times.push(performance.now() - t)
+            if(times.length > 100) {
+                times.shift()
+            }
+            const average = times.reduce((a, b) => a + b, 0) / times.length
         }
         addNodes()
         async function go(){
