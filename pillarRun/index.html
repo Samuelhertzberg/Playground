@@ -3,16 +3,52 @@
 
 <head>
     <meta charset="utf-8">
-    <title>RED BALLS MUST BOUNCE</title>
+    <title>Look At It Go</title>
+    <link rel="stylesheet" href="../assets/styles/fadeIn.css">
     <style>
         body {
             margin: 0;
+        }
+        #scoreLabel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            text-align: right;
+            font-size: 50px;
+            font-weight: bold;
+            color: #fff;
+            z-index: 1;
+        }
+        #deathLabel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            font-size: 18vw;
+            font-weight: bold;
+            color: #f00;
+            z-index: 1;
+            opacity: 1;
+            display: none;
+
+            -webkit-animation: fadeOut 2.5s ease-out;
+            -moz-animation: fadeOut 2.5s ease-out;
+            -o-animation: fadeOut 2.5s ease-out;
+            animation: fadeOut 2.5s ease-out;
         }
     </style>
 </head>
 
 <body>
     <script src="../assets/three/three.js" type="text/javascript"></script>
+    <div id="scoreLabel">
+        0
+    </div>
+    <div id="deathLabel">
+        DEATH
+    </div>
     <script>
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
@@ -30,11 +66,11 @@
             }
         };
         const lightColor = 0xdddddd
-        const trail = []
+        let trail = []
         const trailSize = 70
         const splashSpeed = 2
         const gridSize = 10000
-        const obstacles = []
+        let obstacles = []
         const obstaclesPer10K = 300
         const obstacleSpacing = 10000/obstaclesPer10K
         const obstacleSize = 100
@@ -43,6 +79,7 @@
         let ksCompleted = 0
         let directionChange = 0
         let steeringPower = 0.2
+        const concreteTexture = "https://artx.nyc3.cdn.digitaloceanspaces.com/textures/20/11/polished-concrete-5fc4cb5e32dd7-1200.jpg"
 
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -51,7 +88,7 @@
         camera.rotation.set(-Math.PI/8, 0, 0);
         //Add red ball
         const sphereGeometry = new THREE.SphereGeometry(ball.radius, 32, 32);
-        const sphereMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+        const sphereMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000, shininess: 30 });
         const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
         scene.add(sphere);
 
@@ -59,7 +96,7 @@
         gridHelper.position.set(0, 0, 0);
         scene.add(gridHelper);
 
-        const light = new THREE.PointLight(lightColor, 2)
+        const light = new THREE.PointLight(lightColor, 1.2)
         light.position.set(10, 10, 10)
         scene.add(light)
 
@@ -104,6 +141,7 @@
                 y: ball.y,
                 z: ball.z
             })
+            document.getElementById('scoreLabel').innerHTML = Math.floor(Math.abs(ball.z))
 
             if(trail.length > trailSize) {
                 trail.shift();
@@ -141,14 +179,21 @@
                     z: newZ,
                     size: obstacleSize,
                 }
-                const obstacleGeometry = new THREE.BoxGeometry(obstacle.size, obstacle.size * 10, obstacle.size)
-                const obstacleMaterial = new THREE.MeshPhongMaterial({ color: obstacleColor});
-                const obstacleMesh = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-                obstacleMesh.position.set(obstacle.x, obstacle.y, obstacle.z);
+                const obstacleMesh = getPillarMesh(obstacle.x, obstacle.y, obstacle.z, obstacle.size, obstacle.size * 10)
                 scene.add(obstacleMesh);
                 obstacles.push(obstacleMesh)
             }
         }
+        
+        const getPillarMesh = (x, y, z, width = 100, height = 1000) => {
+            const obstacleGeometry = new THREE.BoxGeometry(width, height, width)
+            const obstacleMaterial = new THREE.MeshPhongMaterial({ color: obstacleColor, reflectivity: 0.7 });
+            const obstacleMesh = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+            obstacleMesh.position.set(x, y, z);
+            return obstacleMesh
+        }
+
+        // scene.add(getPillarMesh(0, 0, -800));
 
         const removeObstacle = () => {
             if(obstacles.length > 0){
@@ -165,8 +210,7 @@
                 }
                 if (Math.abs(obstacle.position.z - ball.z) < obstacleSize/2 + ball.radius) {
                     if (Math.abs(obstacle.position.x - ball.x) < obstacleSize/2 + ball.radius) {
-                        alert("You lost!")
-                        break; 
+                        return true
                     }
                 }
 
@@ -185,12 +229,38 @@
             return (value - min) * (targetMax - targetMin) / (max - min) + targetMin;
         }
 
+        const reset = () => {
+            ball.x = 0
+            ball.y = 0
+            ball.z = 0
+            ball.velocity.x = 0
+            ball.velocity.y = 0
+            ball.velocity.z = -2
+            trail = []
+            obstacles = []
+            ksCompleted = 0
+            gridHelper.position.set(0, 0, -(ksCompleted * 1000) - 1000)
+            sphere.position.set(ball.x, ball.y, ball.z)
+            camera.position.set(ball.x, 120, ball.z + 120)
+            light.position.set(ball.x, ball.y + 50, ball.z)
+            showDeathLabel()
+        }
+
+        const showDeathLabel = () => {
+            document.getElementById('deathLabel').style.display = 'block'
+            document.getElementById('deathLabel').style.opacity = 1
+            setTimeout(()=> {
+                document.getElementById('deathLabel').style.display = 'none'
+                document.getElementById('deathLabel').style.opacity = 0
+            }, 2500)
+        }
+    
         const render = () => {
             addTrail()
             updateBallPosition()
             updateSplash()
             addObstacle()
-            checkCollision()
+            checkCollision() && reset()
             renderer.render(scene, camera);
         };
 
