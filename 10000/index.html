@@ -13,6 +13,7 @@
         }
         .playerDiv {
             display: flex;
+            height: 15vh;
             width: 100%;
             font-size: 5vh;
             margin-right: -1px;
@@ -51,22 +52,20 @@
     </div>
     <script>
         /**
-         * Add name contrains (no duplicates, length etc)
          * Add number dial input
         **/
         const body = document.body
         const addPlayerButton = document.getElementById('addPlayerButton')
         const secc = 10
         let players = [] 
-        // const colorPalette = ["#EB5353", "#F9D923", "#36AE7C", "#187498"]
         const colorPalette = [[235, 83, 83], [249, 217, 35], [54, 174, 124], [24, 116, 152]]
 
         const save = () => {
-            localStorage.setItem("data", JSON.stringify(players));
+            sessionStorage.setItem("data", JSON.stringify(players));
         }
 
         const load = () => {
-            return JSON.parse(localStorage.getItem('data'))
+            return JSON.parse(sessionStorage.getItem('data'))
         }
 
         const getColors = (i) => {
@@ -87,16 +86,11 @@
 
         const addPoints = (name) => {
             const points = Number(window.prompt("Please enter the points:", 0))
-            if(Number.isInteger(points) && points >= 0 && points % 50 === 0) {
-                for (let i = 0; i < players.length; i++) {
-                    const player = players[i];
-                    if(player.name === name){
-                        player.points.push(points)
-                        document.getElementById(name + 'Points').innerHTML = sum(player.points)
-                        save()
-                        break
-                    }
-                }
+            if(checkValidPoints(points)) {
+                const player = players.find(p => p.name === name)
+                player.points.push(points)
+                document.getElementById(name + 'Points').innerHTML = sum(player.points)
+                save()
             } else {
                 alert("Not a valid number")
                 addPoints(name)
@@ -106,21 +100,20 @@
         const generatePlayerDiv = (i = players.length - 1) => {
             const player = players[i]
             const playerDiv = document.createElement('div')
-
             const colors = getColors(i % colorPalette.length)
+            const displayDiv = generateDisplayDiv(player, colors)
+            const addPointsDiv = generateAddPointsDiv(player, colors)
+            playerDiv.appendChild(displayDiv)
+            playerDiv.appendChild(addPointsDiv)
+            playerDiv.classList.add('playerDiv')
+            playerDiv.id = player.name + "Div"
+            return playerDiv
+        }
 
+        const generateDisplayDiv = (player, colors) => {
             const displayDiv = document.createElement('div')
             displayDiv.classList.add("displayDiv")
             displayDiv.style.backgroundColor = colors.primary
-
-            const addPointsDiv = document.createElement('div')
-            addPointsDiv.style.backgroundColor = colors.secondary
-            addPointsDiv.innerHTML = "+"
-            addPointsDiv.classList.add("addPointsDiv")
-            addPointsDiv.addEventListener('click', () => addPoints(player.name))
-
-            playerDiv.appendChild(displayDiv)
-            playerDiv.appendChild(addPointsDiv)
 
             const nameDiv = document.createElement('div')
             nameDiv.innerHTML = player.name
@@ -131,17 +124,20 @@
             pointsDiv.innerHTML = sum(player.points)
             pointsDiv.id = player.name + "Points"
             displayDiv.appendChild(pointsDiv)
+            return displayDiv
+        }
 
-            playerDiv.classList.add('playerDiv')
-            playerDiv.id = player.name + "Div"
-            return playerDiv
+        const generateAddPointsDiv = (player, colors) => {
+            const addPointsDiv = document.createElement('div')
+            addPointsDiv.style.backgroundColor = colors.secondary
+            addPointsDiv.innerHTML = "+"
+            addPointsDiv.classList.add("addPointsDiv")
+            addPointsDiv.addEventListener('click', () => addPoints(player.name))
+            return addPointsDiv
         }
 
         const addPlayer = (name) => {
-            if(!checkName(name)) {
-                return
-            }
-            const  player = {
+            const player = {
                 name,
                 points: []
             }
@@ -151,9 +147,8 @@
             save()
         }
 
-        const checkName = (name) => {
+        const checkValidName = (name) => {
             const sameName = players.filter(p => p.name === name)
-            console.log(sameName);
             if(sameName.length > 0) {
                 alert("That name already exist!")
                 return false
@@ -165,9 +160,14 @@
             return true
         }
 
+        const checkValidPoints = (points) => {
+            const num = Number(points)
+            return Number.isInteger(num) && num % 50 === 0
+        }
+
         addPlayerButton.addEventListener('click', () => {
             const name = window.prompt("Please enter a name", "")
-            name.length > 0 && addPlayer(name)
+            checkValidName(name) && addPlayer(name)
         })
 
         addPlayerButton.style.border = "5px solid " + getColors(0).secondary
