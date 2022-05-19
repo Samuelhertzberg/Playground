@@ -43,6 +43,32 @@
             border-radius: 5vh;
             margin: 10px;
         }
+        .popup {
+            position: absolute;
+            left: 50%;
+            top: 25%;
+            transform: translate(-50%, -25%);
+            border-radius: 10px;
+            background-color: whitesmoke;
+            padding: 10vw;
+            font-size: 2vh;
+            color: black;
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .popup > * {
+            margin: 5px;
+        }
+        .popupInput {
+            border: 0;
+            background-color: whitesmoke;
+            border-bottom: 1px solid black;
+        }
+        .popupInput:focus {
+            outline: none;
+        }
     </style>
 </head>
 
@@ -50,16 +76,24 @@
     <div class="addPlayerButton" id="addPlayerButton">
         Add player
     </div>
+    <div id="addPlayerPopup" class="popup">
+        Please enter a name:
+        <input id="addPlayerPopupInput" class="popupInput" type="text" placeholder="Enter a name"> </input>
+        <button id="confirmAddPlayerButton" >
+            Add
+        </button>
+    </div>
     <script>
         /**
          * Add number dial input
         **/
         const body = document.body
         const addPlayerButton = document.getElementById('addPlayerButton')
+        const confirmAddPlayerButton = document.getElementById('confirmAddPlayerButton')
+        const addPlayerPopup = document.getElementById('addPlayerPopup')
         const secc = 10
         let players = [] 
         const colorPalette = [[235, 83, 83], [249, 217, 35], [54, 174, 124], [24, 116, 152]]
-
         const save = () => {
             sessionStorage.setItem("data", JSON.stringify(players));
         }
@@ -84,17 +118,9 @@
         body.style.backgroundColor = getColors(0).primary
         const sum = (arr) => arr.reduce((partialSum, a) => partialSum + a, 0)
 
-        const addPoints = (name) => {
-            const points = Number(window.prompt("Please enter the points:", 0))
-            if(checkValidPoints(points)) {
-                const player = players.find(p => p.name === name)
-                player.points.push(points)
-                document.getElementById(name + 'Points').innerHTML = sum(player.points)
-                save()
-            } else {
-                alert("Not a valid number")
-                addPoints(name)
-            }
+        const addPoints = (name,) => {
+            document.getElementById(name + "PointsPopup").style.display = "flex"
+            document.getElementById(name + "PointsPopupInput").focus()
         }
 
         const generatePlayerDiv = (i = players.length - 1) => {
@@ -107,6 +133,8 @@
             playerDiv.appendChild(addPointsDiv)
             playerDiv.classList.add('playerDiv')
             playerDiv.id = player.name + "Div"
+            const popup = generatePlayerPopup(player)
+            body.appendChild(popup)
             return playerDiv
         }
 
@@ -134,6 +162,46 @@
             addPointsDiv.classList.add("addPointsDiv")
             addPointsDiv.addEventListener('click', () => addPoints(player.name))
             return addPointsDiv
+        }
+
+        const generatePlayerPopup = (player) => {
+            const popup = document.createElement("div")
+            popup.id = player.name + "PointsPopup"
+            popup.innerHTML = "Please enter points:"
+            popup.classList.add("popup")
+            popup.hidden = true
+            popup.position = "absolute"
+
+            const input = document.createElement("input")
+            input.id = player.name + "PointsPopupInput"
+            input.type = "tel"
+            input.classList.add("popupInput")
+
+            const btn = document.createElement("button")
+            btn.id = player.name + "PointsPopupButton"
+            btn.classList.add("popupButton")
+            btn.innerHTML = "Add Points"
+
+            btn.addEventListener("click", () => {
+                const points = Number(input.value)
+                if (checkValidPoints(points)) {
+                    const pointsRecipient = players.find(p => p.name === player.name)
+                    pointsRecipient.points.push(points)
+                    document.getElementById(player.name + 'Points').innerHTML = sum(pointsRecipient.points)
+                    save()
+                    input.value = ""
+                    popup.style.display = "none"
+                } else {
+                    alert("Not a valid number")
+                    const input = document.getElementById(player.name + 'PointsPopupInput')
+                    input.value = ""
+                    input.focus()
+                }
+            })
+
+            popup.appendChild(input)
+            popup.appendChild(btn)
+            return popup
         }
 
         const addPlayer = (name) => {
@@ -166,8 +234,16 @@
         }
 
         addPlayerButton.addEventListener('click', () => {
-            const name = window.prompt("Please enter a name", "")
+            addPlayerPopup.style.display = "flex"
+            document.getElementById("addPlayerPopupInput").focus()
+        })
+
+        confirmAddPlayerButton.addEventListener('click', () => {
+            const input = document.getElementById("addPlayerPopupInput")
+            const name = input.value
             checkValidName(name) && addPlayer(name)
+            input.value = ""
+            addPlayerPopup.style.display = "none"
         })
 
         addPlayerButton.style.border = "5px solid " + getColors(0).secondary
