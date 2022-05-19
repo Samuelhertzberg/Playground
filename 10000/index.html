@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10000</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            color: white;
+        }
+        .playerDiv {
+            display: flex;
+            width: 100%;
+            font-size: 5vh;
+            margin-right: -1px;
+            margin-bottom: -1px;
+        }
+        .displayDiv {
+            flex-grow: 1;
+            text-align: left;
+            padding: 15px;
+        }
+        .addPointsDiv {
+            height: 15vh;
+            width: 15vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        .addPlayerButton {
+            display: flex;
+            height: 10vh;
+            align-items: center;
+            justify-content: center;
+            font-size: 3vh;
+            background-color: transparent;
+            border-radius: 5vh;
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="addPlayerButton" id="addPlayerButton">
+        Add player
+    </div>
+    <script>
+        /**
+         * Add name contrains (no duplicates, length etc)
+         * Add number dial input
+        **/
+        const body = document.body
+        const addPlayerButton = document.getElementById('addPlayerButton')
+        const secc = 10
+        let players = [] 
+        // const colorPalette = ["#EB5353", "#F9D923", "#36AE7C", "#187498"]
+        const colorPalette = [[235, 83, 83], [249, 217, 35], [54, 174, 124], [24, 116, 152]]
+
+        const save = () => {
+            localStorage.setItem("data", JSON.stringify(players));
+        }
+
+        const load = () => {
+            return JSON.parse(localStorage.getItem('data'))
+        }
+
+        const getColors = (i) => {
+            const c = colorPalette[i]
+            const h = (color) => {
+                var hex = color.toString(16);
+                return hex.length == 1 ? "0" + hex : hex;
+            }
+            const l = (col) => Math.min(255, col + secc)
+            return {
+                primary: '#' + h(c[0]) + h(c[1]) + h(c[2]),
+                secondary: '#' + h(l(c[0])) + h(l(c[1])) + h(l(c[2])),
+            }
+        }
+
+        body.style.backgroundColor = getColors(0).primary
+        const sum = (arr) => arr.reduce((partialSum, a) => partialSum + a, 0)
+
+        const addPoints = (name) => {
+            const points = Number(window.prompt("Please enter the points:", 0))
+            if(Number.isInteger(points) && points >= 0 && points % 50 === 0) {
+                for (let i = 0; i < players.length; i++) {
+                    const player = players[i];
+                    if(player.name === name){
+                        player.points.push(points)
+                        document.getElementById(name + 'Points').innerHTML = sum(player.points)
+                        save()
+                        break
+                    }
+                }
+            } else {
+                alert("Not a valid number")
+                addPoints(name)
+            }
+        }
+
+        const generatePlayerDiv = (i = players.length - 1) => {
+            const player = players[i]
+            const playerDiv = document.createElement('div')
+
+            const colors = getColors(i % colorPalette.length)
+
+            const displayDiv = document.createElement('div')
+            displayDiv.classList.add("displayDiv")
+            displayDiv.style.backgroundColor = colors.primary
+
+            const addPointsDiv = document.createElement('div')
+            addPointsDiv.style.backgroundColor = colors.secondary
+            addPointsDiv.innerHTML = "+"
+            addPointsDiv.classList.add("addPointsDiv")
+            addPointsDiv.addEventListener('click', () => addPoints(player.name))
+
+            playerDiv.appendChild(displayDiv)
+            playerDiv.appendChild(addPointsDiv)
+
+            const nameDiv = document.createElement('div')
+            nameDiv.innerHTML = player.name
+            nameDiv.id = player.name + "Name"
+            displayDiv.appendChild(nameDiv)
+
+            const pointsDiv = document.createElement('div')
+            pointsDiv.innerHTML = sum(player.points)
+            pointsDiv.id = player.name + "Points"
+            displayDiv.appendChild(pointsDiv)
+
+            playerDiv.classList.add('playerDiv')
+            playerDiv.id = player.name + "Div"
+            return playerDiv
+        }
+
+        const addPlayer = (name) => {
+            if(!checkName(name)) {
+                return
+            }
+            const  player = {
+                name,
+                points: []
+            }
+            players.push(player)
+            const playerDiv = generatePlayerDiv()
+            body.prepend(playerDiv)
+            save()
+        }
+
+        const checkName = (name) => {
+            const sameName = players.filter(p => p.name === name)
+            console.log(sameName);
+            if(sameName.length > 0) {
+                alert("That name already exist!")
+                return false
+            }
+            if(name.length > 10){
+                alert("That name is too long :(")
+                return false
+            }
+            return true
+        }
+
+        addPlayerButton.addEventListener('click', () => {
+            const name = window.prompt("Please enter a name", "")
+            name.length > 0 && addPlayer(name)
+        })
+
+        addPlayerButton.style.border = "5px solid " + getColors(0).secondary
+        const oldData = load()
+        const shouldLoad = oldData && confirm("Do you want to load saved data?")
+        if(shouldLoad){
+            players = oldData
+            players.forEach((p, i) => {
+                const playerDiv = generatePlayerDiv(i)
+                body.prepend(playerDiv)
+            });
+        }
+    </script>
+</body>
+
+</html>
