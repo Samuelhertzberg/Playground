@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Syster Seeder</title>
+    <title>System Seeder</title>
     <style>
         body {
             margin: 0;
@@ -140,6 +140,10 @@
 
         var gravityConstant = 1
 
+        let initialBounds = {
+            min: { x: render.bounds.min.x, y: render.bounds.min.y },
+            max: { x: render.bounds.max.x, y: render.bounds.max.y }
+        };
 
 
 
@@ -167,7 +171,11 @@
         /**
          * @returns the radius of the resulting body given a merger between b1 and b2
          */
-        const getFusedRadius = (b1, b2) => Math.sqrt((b1.area + b2.area) / Math.PI)
+        const getFusedRadius = (b1, b2) => {
+            const a1 = Math.PI * b1.circleRadius ** 2
+            const a2 = Math.PI * b2.circleRadius ** 2
+            return Math.sqrt((a1 + a2) / Math.PI)
+        }
 
         /**
          * @return the nobel price in mathematics
@@ -244,6 +252,44 @@
             }
         }
 
+        const collideGroup = (group) => {
+            if (group.length > 1) {
+                const newBody = group.reduce((acc, curr) => fuseBodies(acc, curr))
+                group.forEach(b => Matter.World.remove(engine.world, b))
+                Matter.World.add(engine.world, newBody)
+                if (group.findIndex(b => b.id === focusedBody?.id) >= 0) {
+                    focusedBody = newBody
+                }
+            }
+        }
+        
+
+        const linkCollisions= (pairs) => {
+            const collisions = {}
+            pairs.forEach(({ bodyA, bodyB }) => {
+                collisions[bodyA.id] = [...(collisions[bodyA.id] || []), bodyB]
+                collisions[bodyB.id] = [...(collisions[bodyB.id] || []), bodyA]
+            })
+
+            const getDescendants = (body) => {
+                const id = body.id
+                if(!collisions[id]) return []
+                const children = collisions[id]
+                delete collisions[id]
+                return [...children.flatMap(c => getDescendants(c)), body] 
+            }
+
+            const groups = []
+            while(Object.keys(collisions).length > 0) {
+                const id = Object.keys(collisions)[0]
+                // find body
+                const body = Composite.allBodies(engine.world).find(b => b.id === Number(id)) 
+                const group = getDescendants(body)
+                groups.push(group)
+            }
+            return groups
+        }
+
         const applyGravityForces = (b1, b2) => {
             if (!hasOverlap(b1, b2)) {
                 MatterAttractors.Attractors.gravity(b1, b2)
@@ -263,6 +309,7 @@
                 const mass = 1
                 bodyCollection.push(createBody({ x, y }, size, mass, vector(xDir, yDir)))
             }
+
         }
 
         /**
@@ -390,7 +437,13 @@
                     init(bodies)
                     engine.world.bodies = []
                     Composite.add(engine.world, bodies);
-                    //TODO reset viewport
+
+                    // Reset the viewport
+                    render.bounds.min.x = initialBounds.min.x;
+                    render.bounds.min.y = initialBounds.min.y;
+                    render.bounds.max.x = initialBounds.max.x;
+                    render.bounds.max.y = initialBounds.max.y;
+
                     break;
                 default:
                     break;
@@ -398,7 +451,8 @@
         })
 
         Matter.Events.on(engine, 'collisionStart', ({ pairs }) => {
-            pairs.forEach(collide);
+            const collisionGroups = linkCollisions(pairs)
+            collisionGroups.forEach(collideGroup)
         });
 
         var mouseConstraint = Matter.MouseConstraint.create(engine)
@@ -418,10 +472,21 @@
                 runner.enabled = true
             }
         });
-        
         Matter.Events.on(engine, 'afterUpdate', lookAtFocusedBody);
-
-
+        Matter.Events.on(engine, 'afterUpdate', () => {
+            // log total mass
+            // let t = 0
+            // engine.world.bodies.forEach(b => {
+            //     t += b.mass
+            // })
+            // console.log(t);
+            // log total body area
+            // let a = 0
+            // engine.world.bodies.forEach(b => {
+            //     a += b.area
+            // })
+            // console.log(a);
+        });
 
 
 
