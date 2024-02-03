@@ -8,6 +8,8 @@ This is my collection of very short projects that I do for fun.
 
 [System seeder](https://samuelhertzberg.github.io/Playground/systemSeeder/)
 
+[Circuit](https://samuelhertzberg.github.io/Playground/circuit/)
+
 [Particle collider](https://samuelhertzberg.github.io/Playground/particleCollider/)
 
 [Maze solver](https://samuelhertzberg.github.io/Playground/maze/)

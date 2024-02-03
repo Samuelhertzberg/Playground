@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circuit</title>
+    <style>
+       body {
+            margin: 0;
+            overflow: hidden;
+            color: black;
+        }
+    
+        .inputContainer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 20px;
+            color: lightgray;
+            width: 240px;
+            z-index: 1;
+        }
+    
+        .inputRow {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .displayNumber {
+            margin-left: 15px;
+            padding-right: 10px;
+            width: 10%;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            background: lightgray;
+            height: 3px;
+            border-radius: 5px;
+            margin-top: 15px;
+            box-shadow: 0 0 2px 1px lightgray;
+            width: 90%;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: black;
+            border: 1px solid lightgray;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 8px 1px lightgray;
+        }
+
+        .displayNumber {
+            align-self: center;
+        }
+
+        .tip {
+            color: gray
+        }
+    </style>
+</head>
+
+<body>
+    <div class="inputContainer">
+        <div class="inputLabel">Base Speed</div>
+        <div class="inputRow">
+            <input type="range" min="1" max="100" value="50" class="slider" id="speedSlider">
+            <span id="speedSliderDisplay" class="displayNumber">50%</span>
+        </div>
+        <div class="inputLabel">Base Acceleration</div>
+        <div class="inputRow">
+            <input type="range" min="1" max="100" value="50" class="slider" id="accelerationSlider">
+            <span id="accelerationSliderDisplay" class="displayNumber">50%</span>
+        </div>
+        <div class="inputLabel">Spread</div>
+        <div class="inputRow">
+            <input type="range" min="1" max="100" value="1" class="slider" id="spreadSlider">
+            <span id="spreadSliderDisplay" class="displayNumber">1%</span>
+        </div>
+    </div>
+    <span class="tip" id="tip" style="position: absolute; bottom: 50%; left: 50%;">Draw a circuit</span>
+    <canvas class="canvas">
+        <p>Your browser does not support canvas</p>
+    </canvas>
+    <script>
+        const canvas = document.querySelector('.canvas');
+        const width = canvas.width = window.innerWidth;
+        const height = canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+
+        const racerBaseSpeed = 2
+        const racerSpeedVariation = 0.5
+        const racerBaseAcceleration = 0.1
+        const racerAccelerationVariation = 0.01
+        const racerBaseSpread = 40
+
+        const lookAheadLimit = 5
+        const lookAheadThreshold = 30
+
+        let addCircuit = false
+        let numberOfRacers = 1000
+        let racers = []
+        let circuitPoints = []
+        let oldCircuitPoints = []
+        let circuitComplete = false
+        let drag = 0.99
+        let circuitPointThreshold = 30
+        let racerMaxSpeed = racerBaseSpeed
+        let racerMaxAcceleration = racerBaseAcceleration
+        let racerSpread = 0
+        let hideCircuit = false
+
+
+        const init = () => {
+            racers = []
+            for (let i = 0; i < numberOfRacers; i++) {
+                const variation = Math.random()
+                const x = circuitPoints[0].x
+                const y = circuitPoints[0].y
+                racers.push({
+                    position: {x, y},
+                    speed: {x: 1, y: 0},
+                    target: 0, // index of the next circuit point
+                    targetXFuzz: Math.random() - 1 / 2,
+                    targetYFuzz: Math.random() - 1 / 2,
+                    variation: variation,
+                })
+            }
+        }
+
+        const drawRacers = () => {
+            ctx.fillStyle = `rgb(255,255,255)`;
+            for (let i = 0; i < racers.length; i++) {
+                ctx.fillRect(racers[i].position.x, racers[i].position.y, 2, 2)
+            }
+        }
+
+        const drawCircuit = () => {
+            ctx.strokeStyle = `rgb(100,100,100, 0.1)`;
+            ctx.lineWidth = racerBaseSpread * 1.4
+            ctx.beginPath()
+
+            if(circuitPoints.length > 0) {
+                ctx.moveTo(circuitPoints[0].x, circuitPoints[0].y);
+                const limIndex = circuitPoints.length - 1;
+                for (let i = 0; i < limIndex; i++) {
+                    var xc = (circuitPoints[i].x + circuitPoints[i + 1].x) / 2;
+                    var yc = (circuitPoints[i].y + circuitPoints[i + 1].y) / 2;
+                    ctx.quadraticCurveTo(circuitPoints[i].x, circuitPoints[i].y, xc, yc);
+                }
+                if(circuitComplete) {
+                    ctx.quadraticCurveTo(circuitPoints[limIndex].x, circuitPoints[limIndex ].y, circuitPoints[0].x,circuitPoints[0].y);
+                    ctx.quadraticCurveTo(circuitPoints[0].x, circuitPoints[0].y, circuitPoints[1].x,circuitPoints[1].y);
+                } 
+            }
+            ctx.stroke()
+            ctx.closePath()
+        }
+
+        const draw = () => {
+            ctx.fillStyle = `rgb(0,0,0, 0.1)`;
+            ctx.fillRect(0, 0, width, height);
+            !(hideCircuit && circuitComplete) && drawCircuit()
+            drawRacers()
+        }
+        
+        const eucDist = (x1, y1, x2, y2) => {
+            return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        }
+
+        const setTarget = (racer) => {
+            let minDist = Infinity
+            let minIndex = racer.target
+            const {x, y} = racer.position
+            for (let i = 0; i < lookAheadLimit; i++) {
+                const index = (racer.target + i) % circuitPoints.length
+                const potTarget = circuitPoints[index]
+                const xT = potTarget.x + racer.targetXFuzz * racerSpread
+                const yT = potTarget.y + racer.targetYFuzz * racerSpread
+                const dist = eucDist(x, y, xT, yT)
+
+                if (dist < lookAheadThreshold ) {
+                    racer.target = (index + 1) % circuitPoints.length
+                }
+            }
+            return {
+                index: minIndex,
+                dist: minDist
+            }
+        }
+
+        const updateRacers = () => {
+            for (let i = 0; i < racers.length && circuitComplete; i++) {
+                const racer = racers[i]
+                
+                setTarget(racer)
+
+                const target = circuitPoints[racer.target]
+
+                const xT = target.x + racer.targetXFuzz * racerSpread
+                const yT = target.y + racer.targetYFuzz * racerSpread
+
+                const angle = Math.atan2(yT - racer.position.y, xT - racer.position.x)
+                const acceleration = racerMaxAcceleration * (1 + racerAccelerationVariation * racer.variation)
+                const maxSpeed = racerMaxSpeed * (1 + racerSpeedVariation * racer.variation)
+                const xAcc = Math.cos(angle) * acceleration
+                const yAcc = Math.sin(angle) * acceleration
+                racer.speed.x += xAcc
+                racer.speed.y += yAcc
+                const speed = eucDist(0, 0, racer.speed.x, racer.speed.y)
+                if (speed > maxSpeed) {
+                    racer.speed.x = (racer.speed.x / speed) * maxSpeed
+                    racer.speed.y = (racer.speed.y / speed) * maxSpeed
+                }
+                racer.speed.x *= drag
+                racer.speed.y *= drag
+                racer.position.x += racer.speed.x
+                racer.position.y += racer.speed.y
+            }
+        }
+
+        const trimCircuit = () => {
+            if(circuitPoints.length < 3) return
+            let newCircuitPoints = [circuitPoints[0]]
+            circuitPoints.forEach((p, i) => {
+                const lp = newCircuitPoints[newCircuitPoints.length - 1]
+                if(i > 1 && eucDist(p.x, p.y, lp.x , lp.y) > 40){
+                    newCircuitPoints.push(p)
+                }
+            })
+            circuitPoints = newCircuitPoints
+            
+        }
+
+        async function go(){
+            updateRacers()
+            draw()
+            window.requestAnimationFrame(go)
+        }
+        window.requestAnimationFrame(go)
+
+        canvas.addEventListener('click', (e) => {
+            if (e.button === 2) {
+                circuitComplete = false
+                init()
+                circuitPoints = []
+            } 
+        })
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                oldCircuitPoints = circuitPoints
+                circuitPoints = []
+                circuitComplete = false
+                addCircuit = true
+                document.getElementById("tip").style.display = "none"
+            } 
+        })
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (e.button === 0) {
+                addCircuit = false
+                circuitPoints = circuitPoints.length > 10 ? circuitPoints : oldCircuitPoints
+                if(circuitPoints.length < 10) {
+                    circuitPoints = []
+                    oldCircuitPoints = []
+                } else {
+                    circuitComplete = true
+                    trimCircuit()
+                    init()
+                }
+            } 
+        })
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (addCircuit) {
+                circuitPoints.push({x: e.clientX, y: e.clientY})
+            }
+        })
+
+        document.addEventListener('keypress', (e) => {
+            if(e.code === "Space"){
+                hideCircuit = !hideCircuit
+            }
+        })
+
+        draw()
+        go()
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        /* INPUT HANDLERS */
+
+        const createHandler = (id, setter) => {
+            const input = document.getElementById(id)
+            input.addEventListener("input", (e) => {
+                setter(input.value)
+                const inputLabel = document.getElementById(id + "Display")
+                inputLabel.innerHTML = input.value + "%"
+                e.preventDefault()
+            })
+        }
+
+        createHandler("speedSlider", (val) => {
+            racerMaxSpeed = racerBaseSpeed * 2 * (val / 100)
+        })
+        createHandler("accelerationSlider", (val) => {
+            racerMaxAcceleration = racerBaseAcceleration * 2 * (val / 100)
+        })
+        createHandler("spreadSlider", (val) => {
+            racerSpread = racerBaseSpread * 2 * (val / 100)
+        })
+    </script>
+</body>
+
+</html>
