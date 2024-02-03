@@ -6,7 +6,7 @@ This is my collection of very short projects that I do for fun.
 
 [Boids](https://samuelhertzberg.github.io/Playground/boids/)
 
-[System seeder](https://samuelhertzberg.github.io/Playground/matterTest/)
+[System seeder](https://samuelhertzberg.github.io/Playground/systemSeeder/)
 
 [Particle collider](https://samuelhertzberg.github.io/Playground/particleCollider/)
 
