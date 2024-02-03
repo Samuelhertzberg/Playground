@@ -80,7 +80,7 @@
         <div class="inputLabel">Spread</div>
         <div class="inputRow">
             <input type="range" min="1" max="100" value="10" class="slider" id="spreadSlider">
-            <span id="spreadSliderDisplay" class="displayNumber">10%</span>
+            <span id="spreadSliderDisplay" class="displayNumber">20%</span>
         </div>
     </div>
     <span class="tip" id="tip" style="position: absolute; bottom: 50%; left: 50%;">Draw a circuit</span>
@@ -93,9 +93,9 @@
         const height = canvas.height = window.innerHeight;
         const ctx = canvas.getContext('2d');
 
-        const racerBaseSpeed = 2
+        const racerBaseSpeed = 4
         const racerSpeedVariation = 0.5
-        const racerBaseAcceleration = 0.1
+        const racerBaseAcceleration = 0.4
         const racerAccelerationVariation = 0.01
         const racerBaseSpread = 40
 
@@ -110,9 +110,9 @@
         let circuitComplete = false
         let drag = 0.99
         let circuitPointThreshold = 30
-        let racerMaxSpeed = racerBaseSpeed
-        let racerMaxAcceleration = racerBaseAcceleration
-        let racerSpread = 4
+        let racerMaxSpeed = racerBaseSpeed * 0.5
+        let racerMaxAcceleration = racerBaseAcceleration * 0.5
+        let racerSpread = racerBaseSpread * 0.2
         let hideCircuit = false
 
 
@@ -309,13 +309,13 @@
         }
 
         createHandler("speedSlider", (val) => {
-            racerMaxSpeed = racerBaseSpeed * 2 * (val / 100)
+            racerMaxSpeed = racerBaseSpeed *  (val / 100)
         })
         createHandler("accelerationSlider", (val) => {
-            racerMaxAcceleration = racerBaseAcceleration * 2 * (val / 100)
+            racerMaxAcceleration = racerBaseAcceleration *  (val / 100)
         })
         createHandler("spreadSlider", (val) => {
-            racerSpread = racerBaseSpread * 2 * (val / 100)
+            racerSpread = racerBaseSpread *  (val / 100)
         })
     </script>
 </body>
