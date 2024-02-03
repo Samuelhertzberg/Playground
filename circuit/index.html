@@ -79,8 +79,8 @@
         </div>
         <div class="inputLabel">Spread</div>
         <div class="inputRow">
-            <input type="range" min="1" max="100" value="1" class="slider" id="spreadSlider">
-            <span id="spreadSliderDisplay" class="displayNumber">1%</span>
+            <input type="range" min="1" max="100" value="10" class="slider" id="spreadSlider">
+            <span id="spreadSliderDisplay" class="displayNumber">10%</span>
         </div>
     </div>
     <span class="tip" id="tip" style="position: absolute; bottom: 50%; left: 50%;">Draw a circuit</span>
@@ -112,7 +112,7 @@
         let circuitPointThreshold = 30
         let racerMaxSpeed = racerBaseSpeed
         let racerMaxAcceleration = racerBaseAcceleration
-        let racerSpread = 0
+        let racerSpread = 4
         let hideCircuit = false
 
 
