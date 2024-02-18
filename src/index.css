@@ -1,0 +1,10 @@
+:root {
+  color: rgba(255, 255, 255);
+  background-color: #000;
+}
+
+/* make body fill the entire viewport */
+body {
+  margin: 0;
+  padding: 0;
+}

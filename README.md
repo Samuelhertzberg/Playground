@@ -1,28 +1,30 @@
-# Playground
+# React + TypeScript + Vite
 
-This is my collection of very short projects that I do for fun.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-[Wave](https://samuelhertzberg.github.io/Playground/wave/)
+Currently, two official plugins are available:
 
-[Boids](https://samuelhertzberg.github.io/Playground/boids/)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-[System seeder](https://samuelhertzberg.github.io/Playground/systemSeeder/)
+## Expanding the ESLint configuration
 
-[Circuit](https://samuelhertzberg.github.io/Playground/circuit/)
+If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
 
-[Particle collider](https://samuelhertzberg.github.io/Playground/particleCollider/)
+- Configure the top-level `parserOptions` property like this:
 
-[Maze solver](https://samuelhertzberg.github.io/Playground/maze/)
+```js
+export default {
+  // other rules...
+  parserOptions: {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+    project: ['./tsconfig.json', './tsconfig.node.json'],
+    tsconfigRootDir: __dirname,
+  },
+}
+```
 
-[Flow](https://samuelhertzberg.github.io/Playground/flow/)
-
-[Growth](https://samuelhertzberg.github.io/Playground/growth/)
-
-[Ripples](https://samuelhertzberg.github.io/Playground/ripples/)
-
-[Wordle Solver](https://samuelhertzberg.github.io/Playground/wordleSolver/)
-
-[Propagation](https://samuelhertzberg.github.io/Playground/propagation/)
-
-[Pillar Run](https://samuelhertzberg.github.io/Playground/pillarRun/)
-
+- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
+- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
+- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
