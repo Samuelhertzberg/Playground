@@ -281,7 +281,6 @@ const SystemSeeder = () => {
         SeedingValues={{ maxR, rotationFactor, numberOfBodies, gravityConstant }}
         setSeedingValues={onSaveSeedingValues}
       />
-      <Box ref={scene} style={{ width: '100%', height: '100%' }} />
     </>
   )
 };

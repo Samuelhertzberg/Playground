@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import List, { Project } from './list/List'
 import './App.css'
-import { Box, Button, ThemeProvider, createTheme } from '@mui/material'
+import { Box, Button, Stack, ThemeProvider, createTheme } from '@mui/material'
 import SystemSeeder from './systemSeeder/SystemSeeder'
 
 function App() {
@@ -33,34 +33,40 @@ function App() {
     },
   });
 
+  const notMigratedMessage = (
+    <Stack sx={{height: "100vh"}} display='flex' justifyContent='center' alignItems='center'>
+          Not yet migrated :(
+        </Stack>
+  )
+
   const getActiveProject = () => {
     switch (activeProject) {
       case 0:
         return <SystemSeeder />
       case 1:
-        return <div>Color Wave</div>
+        return notMigratedMessage
       case 2:
-        return <div>Maze Solver</div>
+        return notMigratedMessage
       case 3:
-        return <div>Boids</div>
+        return notMigratedMessage
       case 4:
-        return <div>Circuit</div>
+        return notMigratedMessage
       case 5:
-        return <div>Particle Collider</div>
+        return notMigratedMessage
       case 6:
-        return <div>Intro Screen</div>
+        return notMigratedMessage
       case 7:
-        return <div>Growth</div>
+        return notMigratedMessage
       case 8:
-        return <div>Ripples</div>
+        return notMigratedMessage
       case 9:
-        return <div>Wordle Solver</div>
+        return notMigratedMessage
       case 10:
-        return <div>Propagation</div>
+        return notMigratedMessage
       case 11:
-        return <div>Pillar Run</div>
+        return notMigratedMessage
       default:
-        return <div>Default</div>
+        return notMigratedMessage
     }
   }
 
@@ -70,6 +76,7 @@ function App() {
         backgroundColor: "black",
         m: 0,
         p: 0,
+        height: '100vh'
       }}>
         <Button onClick={() => setActiveProject(undefined)}
           sx={{
