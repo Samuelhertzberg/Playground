@@ -3,6 +3,7 @@ import List, { Project } from './list/List'
 import './App.css'
 import { Box, Button, Stack, ThemeProvider, createTheme } from '@mui/material'
 import SystemSeeder from './systemSeeder/SystemSeeder'
+import Boids from './boids/Boids'
 
 function App() {
 
@@ -48,7 +49,7 @@ function App() {
       case 2:
         return notMigratedMessage
       case 3:
-        return notMigratedMessage
+        return <Boids />
       case 4:
         return notMigratedMessage
       case 5:
