@@ -6,7 +6,7 @@ import Menu, { SeedingValues } from './Menu';
 import { getBoundsDimensions, getFusedMass, getFusedRadius, getFusedVelocity, getMassCenter, hasOverlap } from './getters';
 
 const SystemSeeder = () => {
-  const scene = useRef<any>()
+  const scene = useRef<HTMLDivElement>(null)
   const width = document.documentElement.clientWidth
   const height = document.documentElement.clientHeight
 
@@ -27,7 +27,7 @@ const SystemSeeder = () => {
   use(MatterAttractors);
 
   // module aliases
-  var vector = Vector.create;
+  const vector = Vector.create;
 
   useEffect(() => {
     let dragRef = [-1, -1]
@@ -36,11 +36,11 @@ const SystemSeeder = () => {
 
 
     // create an engine
-    var engine = Engine.create();
+    const engine = Engine.create();
     engine.gravity.y = 0;
 
     // create a renderer
-    var render = Render.create({
+    const render = Render.create({
       element: document.body,
       engine: engine,
       options: {
@@ -52,7 +52,7 @@ const SystemSeeder = () => {
     });
 
     // The global body list
-    var bodies: Body[] = []
+    const bodies: Body[] = []
 
     MatterAttractors.Attractors.gravityConstant = gravityConstant
 
@@ -186,20 +186,20 @@ const SystemSeeder = () => {
       collisionGroups.forEach(collideGroup)
     });
 
-    var mouseConstraint = MouseConstraint.create(engine)
+    const mouseConstraint = MouseConstraint.create(engine)
 
     /**
      * Queries the engine for the bodies that are under the mouse and sets the focused body.
      */
     Events.on(mouseConstraint, 'mousedown', (e) => {
       const zoom = getBoundsDimensions(render).width / width
-      const clickedPoint = {
+      const clickedCoords = {
         x: (e.mouse.position.x * (zoom) + render.bounds.min.x),
         y: (e.mouse.position.y * (zoom) + render.bounds.min.y)
       }
-      let a = Query.point(Composite.allBodies(engine.world), clickedPoint)
-      if (a.length > 0) {
-        setFocusedBody(a[0])
+      const clickedPoints = Query.point(Composite.allBodies(engine.world), clickedCoords)
+      if (clickedPoints.length > 0) {
+        setFocusedBody(clickedPoints[0])
         runner.enabled = true
       }
     });
@@ -258,7 +258,7 @@ const SystemSeeder = () => {
     Render.run(render);
 
     // create runner
-    var runner = Runner.create();
+    const runner = Runner.create();
 
     // run the engine
     Runner.run(runner, engine);
@@ -273,7 +273,7 @@ const SystemSeeder = () => {
       // render.context = null
       render.textures = {}
     }
-  }, [width, height, maxR, rotationFactor, numberOfBodies, gravityConstant])
+  }, [width, height, maxR, rotationFactor, numberOfBodies, gravityConstant, vector])
 
   return (
     <>
@@ -281,6 +281,7 @@ const SystemSeeder = () => {
         SeedingValues={{ maxR, rotationFactor, numberOfBodies, gravityConstant }}
         setSeedingValues={onSaveSeedingValues}
       />
+            <Box ref={scene} style={{ width: '100%', height: '100%' }} />
     </>
   )
 };
