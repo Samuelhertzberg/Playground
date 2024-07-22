@@ -4,6 +4,7 @@ import "./App.css";
 import { Box, Button, Stack, ThemeProvider, createTheme } from "@mui/material";
 import SystemSeeder from "./systemSeeder/SystemSeeder";
 import Boids from "./boids/Boids";
+import Propagation from "./propagation/Propagation";
 
 function App() {
   const [activeProject, setActiveProject] = useState<string>();
@@ -52,11 +53,12 @@ function App() {
     //   description: "If you're a cheater look no further.",
     //   importance: 2,
     // },
-    // {
-    //   title: "Propagation",
-    //   description: "Some sort of cloth simulation I think.",
-    //   importance: 1,
-    // },
+    {
+      id: "propagation",
+      title: "Propagation",
+      description: "Some sort of cloth simulation I think.",
+      importance: 2,
+    },
     // { title: "Pillar Run", description: "I am a red ball and I must explore.", importance: 2},
   ];
 
@@ -72,6 +74,8 @@ function App() {
         return <SystemSeeder />;
       case 'boids':
         return <Boids />;
+      case 'propagation':
+        return <Propagation />;
 
       default:
         return (
