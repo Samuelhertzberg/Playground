@@ -27,7 +27,7 @@ import {
 } from "./getters";
 
 const SystemSeeder = () => {
-  const scene = useRef<HTMLDivElement>(null);
+  const scene = useRef<HTMLElement>(null);
   const width = document.documentElement.clientWidth;
   const height = document.documentElement.clientHeight;
 
@@ -54,6 +54,7 @@ const SystemSeeder = () => {
     let dragRef = [-1, -1];
     let focusedBody: Body | undefined = undefined;
     let focusedBodyLocked = false;
+    if (!scene.current) return;
 
     // create an engine
     const engine = Engine.create();
@@ -61,13 +62,13 @@ const SystemSeeder = () => {
 
     // create a renderer
     const render = Render.create({
-      element: document.body,
+      element: scene.current,
       engine: engine,
       options: {
-        width,
-        height,
         wireframes: false,
         hasBounds: true,
+        width,
+        height,
       },
     });
 
@@ -311,7 +312,12 @@ const SystemSeeder = () => {
   ]);
 
   return (
-    <>
+    <Box ref={scene} sx={{
+      width,
+      height,
+      p: 0,
+      m: 0,
+    }}>
       <Menu
         SeedingValues={{
           maxR,
@@ -321,8 +327,7 @@ const SystemSeeder = () => {
         }}
         setSeedingValues={onSaveSeedingValues}
       />
-      <Box ref={scene} style={{ width: "100%", height: "100%" }} />
-    </>
+    </Box>
   );
 };
 

@@ -1,67 +1,64 @@
 import { useState } from "react";
-import List, { Project } from "./list/List";
+import Gallery, { Project } from "./gallery/Gallery";
 import "./App.css";
 import { Box, Button, Stack, ThemeProvider, createTheme } from "@mui/material";
 import SystemSeeder from "./systemSeeder/SystemSeeder";
 import Boids from "./boids/Boids";
 
 function App() {
-  const [activeProject, setActiveProject] = useState<number>();
+  const [activeProject, setActiveProject] = useState<string>();
 
   const projects: Project[] = [
     {
+      id: "systemSeeder",
       title: "System Seeder",
       description:
         "Watch gravity do its thing and play around with the formation of star systems!",
+      importance: 3,
     },
+
+    // {
+    //   title: "Color Wave",
+    //   description: "I sure hope you like pretty colors and sine waves!",
+    //   importance: 2,
+    // },
+    // {
+    //   title: "Maze Solver",
+    //   description:
+    //     "Do you hate solving mazes but love pathfinding algorithms? Click here, you nerd.",
+    //     importance: 2,
+    // },
     {
-      title: "Color Wave",
-      description: "I sure hope you like pretty colors and sine waves!",
-    },
-    {
-      title: "Maze Solver",
-      description:
-        "Do you hate solving mazes but love pathfinding algorithms? Click here, you nerd.",
-    },
-    {
+      id: "boids",
       title: "Boids",
       description:
         "These boids look oddly repulsive. Click if you like worms I guess.",
+      importance: 2,
     },
-    {
-      title: "Circuit",
-      description:
-        "Watch the computer race it out on the track of your making.",
-    },
-    {
-      title: "Particle Collider",
-      description:
-        "Smash virtual particles together at incredible speeds! Why? Please don't ask those questions on this page.",
-    },
-    {
-      title: "Intro Screen",
-      description:
-        '"That intro screen sure looked nice, Samuel! I would like to see it again please!" \n-You probably',
-    },
-    { title: "Growth", description: "The tree must grow, looks icky" },
-    {
-      title: "Ripples",
-      description: "Play around with waves, it's somewhat relaxing",
-    },
-    {
-      title: "Wordle Solver",
-      description: "If you're a cheater look no further.",
-    },
-    {
-      title: "Propagation",
-      description: "Some sort of cloth simulation I think.",
-    },
-    { title: "Pillar Run", description: "I am a red ball and I must explore." },
+    // {
+    //   title: "Circuit",
+    //   description:
+    //     "Watch the computer race it out on the track of your making.",
+    //     importance: 2,
+    // },
+    // { title: "Growth", description: "The tree must grow, looks icky", importance: 1 },
+    // {
+    //   title: "Ripples",
+    //   description: "Play around with waves, it's somewhat relaxing",
+    //   importance: 1,
+    // },
+    // {
+    //   title: "Wordle Solver",
+    //   description: "If you're a cheater look no further.",
+    //   importance: 2,
+    // },
+    // {
+    //   title: "Propagation",
+    //   description: "Some sort of cloth simulation I think.",
+    //   importance: 1,
+    // },
+    // { title: "Pillar Run", description: "I am a red ball and I must explore.", importance: 2},
   ];
-
-  const onClickProject = (i: number) => {
-    setActiveProject(i);
-  };
 
   const darkTheme = createTheme({
     palette: {
@@ -71,9 +68,9 @@ function App() {
 
   const getActiveProject = () => {
     switch (activeProject) {
-      case 0:
+      case 'systemSeeder':
         return <SystemSeeder />;
-      case 3:
+      case 'boids':
         return <Boids />;
 
       default:
@@ -92,25 +89,25 @@ function App() {
 
   return (
     <ThemeProvider theme={darkTheme}>
-      <Box
-        sx={{
-          backgroundColor: "black",
-          m: 0,
-          p: 0,
-        }}
-      >
+      <Box sx={{
+        p: 0,
+        m: 0,
+        position: "relative",
+      }}>
+
         <Button
           onClick={() => setActiveProject(undefined)}
           sx={{
             position: "absolute",
             top: "10px",
             left: "10px",
+            display: activeProject === undefined ? "none" : "block",
           }}
         >
           Back
         </Button>
         {activeProject === undefined && (
-          <List projects={projects} onClickProject={onClickProject} />
+          <Gallery projects={projects} onClickProject={setActiveProject} />
         )}
         {activeProject !== undefined && getActiveProject()}
       </Box>
