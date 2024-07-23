@@ -6,6 +6,7 @@ import SystemSeeder from "./systemSeeder/SystemSeeder";
 import Boids from "./boids/Boids";
 import Propagation from "./propagation/Propagation";
 import Circuit from "./circuit/Circuit";
+import Stream from "./stream/Stream";
 
 function App() {
   const [activeProject, setActiveProject] = useState<string>();
@@ -61,6 +62,12 @@ function App() {
       description: "Some sort of cloth simulation I think.",
       importance: 2,
     },
+    {
+      id: "stream",
+      title: "Stream",
+      description: "Play around with a stream of energetic particles.",
+      importance: 2,
+    },
     // { title: "Pillar Run", description: "I am a red ball and I must explore.", importance: 2},
   ];
 
@@ -80,6 +87,8 @@ function App() {
         return <Propagation />;
       case 'circuit':
         return <Circuit />;
+      case 'stream':
+        return <Stream />;
 
       default:
         return (
