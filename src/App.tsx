@@ -5,6 +5,7 @@ import { Box, Button, Stack, ThemeProvider, createTheme } from "@mui/material";
 import SystemSeeder from "./systemSeeder/SystemSeeder";
 import Boids from "./boids/Boids";
 import Propagation from "./propagation/Propagation";
+import Circuit from "./circuit/Circuit";
 
 function App() {
   const [activeProject, setActiveProject] = useState<string>();
@@ -36,12 +37,13 @@ function App() {
         "These boids look oddly repulsive. Click if you like worms I guess.",
       importance: 2,
     },
-    // {
-    //   title: "Circuit",
-    //   description:
-    //     "Watch the computer race it out on the track of your making.",
-    //     importance: 2,
-    // },
+    {
+      id: "circuit",
+      title: "Circuit",
+      description:
+        "Watch the computer race it out on the track of your making.",
+        importance: 2,
+    },
     // { title: "Growth", description: "The tree must grow, looks icky", importance: 1 },
     // {
     //   title: "Ripples",
@@ -76,6 +78,8 @@ function App() {
         return <Boids />;
       case 'propagation':
         return <Propagation />;
+      case 'circuit':
+        return <Circuit />;
 
       default:
         return (
