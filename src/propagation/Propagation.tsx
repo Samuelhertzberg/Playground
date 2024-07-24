@@ -13,6 +13,7 @@ const modes = [
   "compass",
   "fade",
   "funky fade",
+  "wave",
 ];
 
 const sketch = (p5: P5CanvasInstance) => {
@@ -105,16 +106,38 @@ const sketch = (p5: P5CanvasInstance) => {
     }, 5000);
   };
 
+  const drawRow = (r: number) => {
+    if (modes[mode] === "wave") {
+      p5.noFill();
+      p5.stroke(0);
+      p5.strokeWeight(1);
+      p5.beginShape();
+      for (let c = 0; c < cols - 1; c++) {
+        const x = c * cellSize;
+        const y = r * cellSize;
+        const displacement = displaceMentGrid[c][r];
+        const xDisp = clamp(displacement.x, -50, 50);
+        const yDisp = clamp(displacement.y, -50, 50);
+        p5.curveVertex(x + xDisp, y + yDisp);
+      }
+      p5.endShape();
+    }
+  };
+
   p5.draw = () => {
     p5.push();
     p5.background(255);
-    for (let i = 0; i < cols; i++) {
-      for (let j = 0; j < rows; j++) {
-        const displacement = displaceMentGrid[i][j];
+    for (let r = 0; r < rows; r++) {
+      if (modes[mode] === "wave") {
+        drawRow(r);
+        continue;
+      }
+      for (let c = 0; c < cols; c++) {
+        const displacement = displaceMentGrid[c][r];
         const xDisp = clamp(displacement.x, -20, 20);
         const yDisp = clamp(displacement.y, -20, 20);
-        const x = i * cellSize + xDisp;
-        const y = j * cellSize + yDisp;
+        const x = c * cellSize + xDisp;
+        const y = r * cellSize + yDisp;
         p5.fill(0);
         if (modes[mode] === "circle") {
           p5.strokeCap(p5.ROUND);
