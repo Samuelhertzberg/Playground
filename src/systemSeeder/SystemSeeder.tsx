@@ -6,7 +6,7 @@ import Menu, { SeedingValues } from './Menu';
 import { getBoundsDimensions, getFusedMass, getFusedRadius, getFusedVelocity, getMassCenter, hasOverlap } from './getters';
 
 const SystemSeeder = () => {
-  const scene = useRef<any>()
+  const scene = useRef<HTMLDivElement >()
   const width = document.documentElement.clientWidth
   const height = document.documentElement.clientHeight
 
@@ -41,7 +41,7 @@ const SystemSeeder = () => {
 
     // create a renderer
     var render = Render.create({
-      element: document.body,
+      element: scene.current,
       engine: engine,
       options: {
         width,
@@ -281,7 +281,7 @@ const SystemSeeder = () => {
         SeedingValues={{ maxR, rotationFactor, numberOfBodies, gravityConstant }}
         setSeedingValues={onSaveSeedingValues}
       />
-      <Box ref={scene} style={{ width: '100%', height: '100%' }} />
+      <Box component="div" ref={scene} />
     </>
   )
 };

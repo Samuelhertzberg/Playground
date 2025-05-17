@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import List, { Project } from './list/List'
-import './App.css'
 import { Box, Button, ThemeProvider, createTheme } from '@mui/material'
 import SystemSeeder from './systemSeeder/SystemSeeder'
+import Intro from './intro'
 
 function App() {
 
-  const [activeProject, setActiveProject] = useState<number>()
+  const [activeProject, setActiveProject] = useState<number | undefined>(6)
 
   const projects: Project[] = [
     { title: "System Seeder", description: "Watch gravity do its thing and play around with the formation of star systems!" },
@@ -48,7 +48,7 @@ function App() {
       case 5:
         return <div>Particle Collider</div>
       case 6:
-        return <div>Intro Screen</div>
+        return <Intro />
       case 7:
         return <div>Growth</div>
       case 8:
@@ -66,7 +66,7 @@ function App() {
 
   return (
     <ThemeProvider theme={darkTheme}>
-      <Box sx={{
+      <Box component="div" sx={{
         backgroundColor: "black",
         m: 0,
         p: 0,
