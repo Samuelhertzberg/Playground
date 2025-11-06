@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, Slider, Typography, Stack } from "@mui/material";
+import { Box, Button, Slider, Typography, Stack, Paper } from "@mui/material";
 
 // Constants
 const PHYSICS_CONFIG = {
@@ -41,6 +41,7 @@ const GravitySimulator = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isPerformanceMode, setIsPerformanceMode] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(false);
 
   // Control states
   const [cloudCount, setCloudCount] = useState(1000);
@@ -777,198 +778,17 @@ const GravitySimulator = () => {
         }}
       />
 
-      {/* Controls */}
+      {/* Stats Display */}
       <Box
         sx={{
           position: "absolute",
-          top: 10,
-          left: 10,
+          top: 20,
+          left: 20,
           color: "white",
           background: "rgba(0, 0, 0, 0.7)",
-          padding: "15px",
+          padding: "10px 15px",
           borderRadius: "8px",
           fontSize: "14px",
-          minWidth: "250px",
-        }}
-      >
-        <Typography variant="h6" sx={{ mb: 2, textShadow: "0 0 10px rgba(255,255,255,0.5)" }}>
-          Gravity Simulator
-        </Typography>
-
-        {/* Cloud Generation */}
-        <Box sx={{ mb: 2, pb: 2, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          <Typography
-            sx={{
-              fontWeight: "bold",
-              mb: 1,
-              fontSize: "13px",
-              textShadow: "0 0 8px rgba(255,255,255,0.3)",
-              letterSpacing: "1px",
-            }}
-          >
-            CLOUD GENERATOR
-          </Typography>
-          <Stack spacing={1}>
-            <Box>
-              <Typography variant="caption">
-                Count: {cloudCount}
-              </Typography>
-              <Slider
-                value={cloudCount}
-                onChange={(_, value) => setCloudCount(value as number)}
-                min={10}
-                max={2000}
-                step={10}
-                size="small"
-              />
-            </Box>
-            <Box>
-              <Typography variant="caption">
-                Size: {cloudSize}
-              </Typography>
-              <Slider
-                value={cloudSize}
-                onChange={(_, value) => setCloudSize(value as number)}
-                min={50}
-                max={1000}
-                step={10}
-                size="small"
-              />
-            </Box>
-            <Box>
-              <Typography variant="caption">
-                Spin: {cloudSpin}
-              </Typography>
-              <Slider
-                value={cloudSpin}
-                onChange={(_, value) => setCloudSpin(value as number)}
-                min={0}
-                max={100}
-                step={5}
-                size="small"
-              />
-            </Box>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => (window as any).__addBodyCloud()}
-              sx={{ mt: 1 }}
-            >
-              Generate Cloud
-            </Button>
-          </Stack>
-        </Box>
-
-        {/* Physics Controls */}
-        <Box sx={{ mb: 2, pb: 2, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          <Typography
-            sx={{
-              fontWeight: "bold",
-              mb: 1,
-              fontSize: "13px",
-              textShadow: "0 0 8px rgba(255,255,255,0.3)",
-              letterSpacing: "1px",
-            }}
-          >
-            COSMIC FORCES
-          </Typography>
-          <Stack spacing={1}>
-            <Box>
-              <Typography variant="caption">
-                Gravity: {gravity}
-              </Typography>
-              <Slider
-                value={gravity}
-                onChange={(_, value) => setGravity(value as number)}
-                min={0.1}
-                max={5}
-                step={0.1}
-                size="small"
-              />
-            </Box>
-            <Box>
-              <Typography variant="caption">
-                Speed: {speed}
-              </Typography>
-              <Slider
-                value={speed}
-                onChange={(_, value) => setSpeed(value as number)}
-                min={0.1}
-                max={100}
-                step={0.1}
-                size="small"
-              />
-            </Box>
-          </Stack>
-        </Box>
-
-        {/* Simulation Controls */}
-        <Box sx={{ mb: 2, pb: 2, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          <Typography
-            sx={{
-              fontWeight: "bold",
-              mb: 1,
-              fontSize: "13px",
-              textShadow: "0 0 8px rgba(255,255,255,0.3)",
-              letterSpacing: "1px",
-            }}
-          >
-            MISSION CONTROL
-          </Typography>
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => (window as any).__clearBodies()}
-            >
-              Clear Universe
-            </Button>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => (window as any).__resetView()}
-            >
-              Reset View
-            </Button>
-          </Stack>
-        </Box>
-
-        {/* Help */}
-        <Box>
-          <Typography
-            sx={{
-              fontWeight: "bold",
-              mb: 1,
-              fontSize: "13px",
-              textShadow: "0 0 8px rgba(255,255,255,0.3)",
-              letterSpacing: "1px",
-            }}
-          >
-            NAVIGATION
-          </Typography>
-          <Typography variant="caption" component="div" sx={{ lineHeight: 1.6 }}>
-            • Click and drag to pan
-            <br />
-            • Mouse wheel to zoom
-            <br />
-            • Click on a body to follow it
-            <br />• Press SPACE to pause/resume
-          </Typography>
-        </Box>
-      </Box>
-
-      {/* Stats */}
-      <Box
-        sx={{
-          position: "absolute",
-          top: 10,
-          right: 10,
-          color: "white",
-          background: "rgba(0, 0, 0, 0.7)",
-          padding: "15px",
-          borderRadius: "8px",
-          fontSize: "14px",
-          textAlign: "right",
         }}
       >
         <Typography variant="body2">Bodies: {bodyCount}</Typography>
@@ -976,20 +796,189 @@ const GravitySimulator = () => {
         <Typography variant="body2">Zoom: {zoomLevel}</Typography>
         {isPaused && (
           <Typography variant="body2" sx={{ color: "#ff9800", mt: 1 }}>
-            SIMULATION PAUSED
+            PAUSED
           </Typography>
         )}
         {isFollowing && (
           <Typography variant="body2" sx={{ color: "#2196f3", mt: 1 }}>
-            TRACKING TARGET
+            TRACKING
           </Typography>
         )}
         {isPerformanceMode && (
           <Typography variant="body2" sx={{ color: "#4caf50", mt: 1 }}>
-            PERFORMANCE MODE
+            PERFORMANCE
           </Typography>
         )}
       </Box>
+
+      {/* Settings Toggle */}
+      <Button
+        onClick={() => setControlsOpen(!controlsOpen)}
+        sx={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          backgroundColor: "#333",
+          color: "white",
+          width: "40px",
+          height: "40px",
+          minWidth: "40px",
+          borderRadius: "50%",
+          fontSize: "18px",
+          "&:hover": { backgroundColor: "#555" },
+        }}
+      >
+        ⚙️
+      </Button>
+
+      {/* Controls Menu */}
+      {controlsOpen && (
+        <Paper
+          sx={{
+            position: "absolute",
+            top: 70,
+            right: 20,
+            backgroundColor: "rgba(51, 51, 51, 0.95)",
+            borderRadius: "8px",
+            padding: "15px",
+            minWidth: "280px",
+            maxHeight: "80vh",
+            overflowY: "auto",
+          }}
+        >
+          <Stack spacing={2}>
+            <Typography variant="h6" sx={{ color: "white", mb: 1 }}>
+              Gravity Simulator
+            </Typography>
+
+            {/* Cloud Generation */}
+            <Box>
+              <Typography variant="body2" color="white" fontWeight="bold" gutterBottom>
+                Cloud Generator
+              </Typography>
+              <Box>
+                <Typography variant="body2" color="white" gutterBottom>
+                  Count: {cloudCount}
+                </Typography>
+                <Slider
+                  value={cloudCount}
+                  onChange={(_, value) => setCloudCount(value as number)}
+                  min={10}
+                  max={2000}
+                  step={10}
+                  size="small"
+                />
+              </Box>
+              <Box>
+                <Typography variant="body2" color="white" gutterBottom>
+                  Size: {cloudSize}
+                </Typography>
+                <Slider
+                  value={cloudSize}
+                  onChange={(_, value) => setCloudSize(value as number)}
+                  min={50}
+                  max={1000}
+                  step={10}
+                  size="small"
+                />
+              </Box>
+              <Box>
+                <Typography variant="body2" color="white" gutterBottom>
+                  Spin: {cloudSpin}
+                </Typography>
+                <Slider
+                  value={cloudSpin}
+                  onChange={(_, value) => setCloudSpin(value as number)}
+                  min={0}
+                  max={100}
+                  step={5}
+                  size="small"
+                />
+              </Box>
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={() => (window as any).__addBodyCloud()}
+              >
+                Generate Cloud
+              </Button>
+            </Box>
+
+            {/* Physics Controls */}
+            <Box>
+              <Typography variant="body2" color="white" fontWeight="bold" gutterBottom>
+                Cosmic Forces
+              </Typography>
+              <Box>
+                <Typography variant="body2" color="white" gutterBottom>
+                  Gravity: {gravity}
+                </Typography>
+                <Slider
+                  value={gravity}
+                  onChange={(_, value) => setGravity(value as number)}
+                  min={0.1}
+                  max={5}
+                  step={0.1}
+                  size="small"
+                />
+              </Box>
+              <Box>
+                <Typography variant="body2" color="white" gutterBottom>
+                  Speed: {speed}
+                </Typography>
+                <Slider
+                  value={speed}
+                  onChange={(_, value) => setSpeed(value as number)}
+                  min={0.1}
+                  max={100}
+                  step={0.1}
+                  size="small"
+                />
+              </Box>
+            </Box>
+
+            {/* Simulation Controls */}
+            <Box>
+              <Typography variant="body2" color="white" fontWeight="bold" gutterBottom>
+                Mission Control
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => (window as any).__clearBodies()}
+                  sx={{ flex: 1 }}
+                >
+                  Clear
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => (window as any).__resetView()}
+                  sx={{ flex: 1 }}
+                >
+                  Reset View
+                </Button>
+              </Stack>
+            </Box>
+
+            {/* Help */}
+            <Box>
+              <Typography variant="body2" color="white" fontWeight="bold" gutterBottom>
+                Controls
+              </Typography>
+              <Typography variant="body2" color="white" sx={{ fontSize: "12px", lineHeight: 1.6 }}>
+                • Click and drag to pan
+                <br />
+                • Mouse wheel to zoom
+                <br />
+                • Click on a body to follow it
+                <br />• Press SPACE to pause/resume
+              </Typography>
+            </Box>
+          </Stack>
+        </Paper>
+      )}
     </Box>
   );
 };

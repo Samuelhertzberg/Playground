@@ -1,5 +1,7 @@
 import { P5CanvasInstance, ReactP5Wrapper, Sketch } from "@p5-wrapper/react";
 import p5, { Vector } from "p5";
+import { useState } from "react";
+import { Box, Button, Paper, Slider, Stack, Typography } from "@mui/material";
 
 const flockSize = 200;
 
@@ -12,19 +14,25 @@ type Boid = {
   positionHistory: p5.Vector[];
 };
 
-const sketch: Sketch = (p5: P5CanvasInstance) => {
-  let alignSlider: p5.Element;
-  let cohesionSlider: p5.Element;
-  let separationSlider: p5.Element;
+type SketchProps = {
+  alignment: number;
+  cohesion: number;
+  separation: number;
+};
+
+const sketch: Sketch<SketchProps> = (p5: P5CanvasInstance<SketchProps>) => {
+  let alignment = 0.7;
+  let cohesion = 0.6;
+  let separation = 0.4;
+
+  p5.updateWithProps = (props: SketchProps) => {
+    if (props.alignment !== undefined) alignment = props.alignment;
+    if (props.cohesion !== undefined) cohesion = props.cohesion;
+    if (props.separation !== undefined) separation = props.separation;
+  };
 
   p5.setup = () => {
     p5.createCanvas(window.innerWidth, window.innerHeight);
-    alignSlider = p5.createSlider(0, 2, 0.7, 0.1);
-    cohesionSlider = p5.createSlider(0, 2, 0.6, 0.1);
-    separationSlider = p5.createSlider(0, 2, 0.4, 0.1);
-    alignSlider.position(10, 10 + 40);
-    cohesionSlider.position(10, 30 + 40);
-    separationSlider.position(10, 50 + 40);
   };
   const flock: Boid[] = [];
 
@@ -188,17 +196,17 @@ const sketch: Sketch = (p5: P5CanvasInstance) => {
     p5.noStroke();
 
     for (const boid of flock) {
-      const alignment = applyAlignment(boid);
-      const cohesion = applyCohesion(boid);
-      const separation = applySeparation(boid);
+      const alignmentForce = applyAlignment(boid);
+      const cohesionForce = applyCohesion(boid);
+      const separationForce = applySeparation(boid);
 
-      alignment.mult(alignSlider.value() as number);
-      cohesion.mult(cohesionSlider.value() as number);
-      separation.mult(separationSlider.value() as number);
+      alignmentForce.mult(alignment);
+      cohesionForce.mult(cohesion);
+      separationForce.mult(separation);
 
-      boid.acceleration.add(alignment);
-      boid.acceleration.add(cohesion);
-      boid.acceleration.add(separation);
+      boid.acceleration.add(alignmentForce);
+      boid.acceleration.add(cohesionForce);
+      boid.acceleration.add(separationForce);
 
       boid.position.add(boid.velocity);
       boid.positionHistory?.push(boid.position.copy());
@@ -227,7 +235,122 @@ const sketch: Sketch = (p5: P5CanvasInstance) => {
 };
 
 const Boids = () => {
-  return <ReactP5Wrapper sketch={sketch} />;
+  const [controlsOpen, setControlsOpen] = useState(false);
+  const [alignment, setAlignment] = useState(0.7);
+  const [cohesion, setCohesion] = useState(0.6);
+  const [separation, setSeparation] = useState(0.4);
+
+  return (
+    <Box sx={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
+      <ReactP5Wrapper
+        sketch={sketch}
+        alignment={alignment}
+        cohesion={cohesion}
+        separation={separation}
+      />
+
+      {/* Settings Toggle */}
+      <Button
+        onClick={() => setControlsOpen(!controlsOpen)}
+        sx={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          backgroundColor: "#333",
+          color: "white",
+          width: "40px",
+          height: "40px",
+          minWidth: "40px",
+          borderRadius: "50%",
+          fontSize: "18px",
+          "&:hover": { backgroundColor: "#555" },
+          zIndex: 1000,
+        }}
+      >
+        ⚙️
+      </Button>
+
+      {/* Controls Menu */}
+      {controlsOpen && (
+        <Paper
+          sx={{
+            position: "absolute",
+            top: 70,
+            right: 20,
+            backgroundColor: "rgba(51, 51, 51, 0.95)",
+            borderRadius: "8px",
+            padding: "15px",
+            minWidth: "280px",
+            maxHeight: "80vh",
+            overflowY: "auto",
+            zIndex: 1000,
+          }}
+        >
+          <Stack spacing={2}>
+            <Typography variant="h6" sx={{ color: "white", mb: 1 }}>
+              Boids
+            </Typography>
+
+            <Box>
+              <Typography variant="body2" color="white" gutterBottom>
+                Alignment: {alignment.toFixed(1)}
+              </Typography>
+              <Slider
+                value={alignment}
+                onChange={(_, value) => setAlignment(value as number)}
+                min={0}
+                max={2}
+                step={0.1}
+                size="small"
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="white" gutterBottom>
+                Cohesion: {cohesion.toFixed(1)}
+              </Typography>
+              <Slider
+                value={cohesion}
+                onChange={(_, value) => setCohesion(value as number)}
+                min={0}
+                max={2}
+                step={0.1}
+                size="small"
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="white" gutterBottom>
+                Separation: {separation.toFixed(1)}
+              </Typography>
+              <Slider
+                value={separation}
+                onChange={(_, value) => setSeparation(value as number)}
+                min={0}
+                max={2}
+                step={0.1}
+                size="small"
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="white" fontWeight="bold" gutterBottom>
+                Controls
+              </Typography>
+              <Typography variant="body2" color="white" sx={{ fontSize: "12px", lineHeight: 1.6 }}>
+                Adjust the sliders to change boid behavior:
+                <br />
+                • Alignment: Steer towards average heading
+                <br />
+                • Cohesion: Move towards center of flock
+                <br />• Separation: Avoid crowding neighbors
+              </Typography>
+            </Box>
+          </Stack>
+        </Paper>
+      )}
+    </Box>
+  );
 };
 
 export default Boids;

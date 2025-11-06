@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Box, Typography } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
+import { Box, Button, Paper, Stack, Typography } from "@mui/material";
 
 // Grid parameters
 const GRID_SIZE = 20;
@@ -9,6 +9,8 @@ const WAVE_STRENGTH = 50;
 
 const Propagation = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [controlsOpen, setControlsOpen] = useState(false);
+  const [currentMode, setCurrentMode] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -126,6 +128,7 @@ const Propagation = () => {
 
     const handleClick = () => {
       visualizationMode = (visualizationMode + 1) % VISUALIZATION_MODES;
+      setCurrentMode(visualizationMode);
     };
 
     // Wave propagation
@@ -550,6 +553,18 @@ const Propagation = () => {
     };
   }, []);
 
+  const getModeNames = () => [
+    "Pulsing Squares",
+    "Fade Grid",
+    "Funky Squares",
+    "Lines",
+    "Compass",
+    "Wave Grid",
+    "Circles",
+    "Cross Pattern",
+    "Motion Blur"
+  ];
+
   return (
     <Box sx={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
       <canvas
@@ -560,24 +575,83 @@ const Propagation = () => {
         }}
       />
 
-      <Box
+      {/* Settings Toggle */}
+      <Button
+        onClick={() => setControlsOpen(!controlsOpen)}
         sx={{
           position: "absolute",
-          top: 10,
-          left: 10,
-          color: "#333",
-          fontSize: "14px",
-          background: "rgba(255, 255, 255, 0.8)",
-          padding: "10px",
-          borderRadius: "5px",
+          top: 20,
+          right: 20,
+          backgroundColor: "#333",
+          color: "white",
+          width: "40px",
+          height: "40px",
+          minWidth: "40px",
+          borderRadius: "50%",
+          fontSize: "18px",
+          "&:hover": { backgroundColor: "#555" },
+          zIndex: 1000,
         }}
       >
-        <Typography variant="body2">
-          Move your cursor around to create waves!
-          <br />
-          Click to change visualization mode.
-        </Typography>
-      </Box>
+        ⚙️
+      </Button>
+
+      {/* Controls Menu */}
+      {controlsOpen && (
+        <Paper
+          sx={{
+            position: "absolute",
+            top: 70,
+            right: 20,
+            backgroundColor: "rgba(51, 51, 51, 0.95)",
+            borderRadius: "8px",
+            padding: "15px",
+            minWidth: "280px",
+            maxHeight: "80vh",
+            overflowY: "auto",
+            zIndex: 1000,
+          }}
+        >
+          <Stack spacing={2}>
+            <Typography variant="h6" sx={{ color: "white", mb: 1 }}>
+              Propagation
+            </Typography>
+
+            <Box>
+              <Typography variant="body2" color="white" fontWeight="bold" gutterBottom>
+                Current Mode
+              </Typography>
+              <Typography variant="body2" color="white" sx={{ mb: 1 }}>
+                {getModeNames()[currentMode]}
+              </Typography>
+              <Typography variant="body2" color="white" sx={{ fontSize: "12px" }}>
+                Click anywhere on the canvas to cycle through modes
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="white" fontWeight="bold" gutterBottom>
+                Controls
+              </Typography>
+              <Typography variant="body2" color="white" sx={{ fontSize: "12px", lineHeight: 1.6 }}>
+                • Move your cursor to create waves
+                <br />
+                • Click to change visualization mode
+                <br />• 9 different visual styles available
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="white" fontWeight="bold" gutterBottom>
+                About
+              </Typography>
+              <Typography variant="body2" color="white" sx={{ fontSize: "12px", lineHeight: 1.6 }}>
+                Wave propagation simulation showing how disturbances spread through a 2D grid with different visualization styles.
+              </Typography>
+            </Box>
+          </Stack>
+        </Paper>
+      )}
     </Box>
   );
 };
