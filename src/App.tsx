@@ -2,21 +2,29 @@ import { useState } from "react";
 import Gallery, { Project } from "./gallery/Gallery";
 import "./App.css";
 import { Box, Button, Stack, ThemeProvider, createTheme } from "@mui/material";
-import SystemSeeder from "./systemSeeder/SystemSeeder";
+import GravitySimulator from "./gravitySimulator/GravitySimulator";
 import Boids from "./boids/Boids";
 import Propagation from "./propagation/Propagation";
 import Circuit from "./circuit/Circuit";
 import Stream from "./stream/Stream";
+import Harmonics from "./harmonics/Harmonics";
 
 function App() {
   const [activeProject, setActiveProject] = useState<string>();
 
   const projects: Project[] = [
     {
-      id: "systemSeeder",
-      title: "System Seeder",
+      id: "gravitySimulator",
+      title: "Gravity Simulator",
       description:
         "Watch gravity do its thing and play around with the formation of star systems!",
+      importance: 3,
+    },
+    {
+      id: "harmonics",
+      title: "Harmonics",
+      description:
+        "Mesmerizing harmonic oscillations with multiple visualization modes!",
       importance: 3,
     },
 
@@ -38,13 +46,13 @@ function App() {
         "These boids look oddly repulsive. Click if you like worms I guess.",
       importance: 2,
     },
-    {
-      id: "circuit",
-      title: "Circuit",
-      description:
-        "Watch the computer race it out on the track of your making.",
-        importance: 2,
-    },
+    // {
+    //   id: "circuit",
+    //   title: "Circuit",
+    //   description:
+    //     "Watch the computer race it out on the track of your making.",
+    //     importance: 2,
+    // },
     // { title: "Growth", description: "The tree must grow, looks icky", importance: 1 },
     // {
     //   title: "Ripples",
@@ -59,15 +67,15 @@ function App() {
     {
       id: "propagation",
       title: "Propagation",
-      description: "Some sort of cloth simulation I think.",
+      description: "Create beautiful wave patterns with your cursor!",
       importance: 2,
     },
-    {
-      id: "stream",
-      title: "Stream",
-      description: "Play around with a stream of energetic particles.",
-      importance: 2,
-    },
+    // {
+    //   id: "stream",
+    //   title: "Stream",
+    //   description: "Play around with a stream of energetic particles.",
+    //   importance: 2,
+    // },
     // { title: "Pillar Run", description: "I am a red ball and I must explore.", importance: 2},
   ];
 
@@ -79,8 +87,10 @@ function App() {
 
   const getActiveProject = () => {
     switch (activeProject) {
-      case 'systemSeeder':
-        return <SystemSeeder />;
+      case 'gravitySimulator':
+        return <GravitySimulator />;
+      case 'harmonics':
+        return <Harmonics />;
       case 'boids':
         return <Boids />;
       case 'propagation':
