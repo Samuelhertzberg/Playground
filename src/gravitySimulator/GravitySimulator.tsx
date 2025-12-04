@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Button, Slider, Typography, Stack, Paper } from "@mui/material";
+import BackButton from "../components/BackButton";
+import useMouseActivity from "../hooks/useMouseActivity";
 
 // Constants
 const PHYSICS_CONFIG = {
@@ -49,6 +51,8 @@ const GravitySimulator = () => {
   const [cloudSpin, setCloudSpin] = useState(20);
   const [gravity, setGravity] = useState(2.5);
   const [speed, setSpeed] = useState(25);
+
+  const { opacity: uiOpacity } = useMouseActivity(3000, 0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -770,6 +774,8 @@ const GravitySimulator = () => {
 
   return (
     <Box sx={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
+      <BackButton />
+
       <canvas
         ref={canvasRef}
         style={{
@@ -782,13 +788,15 @@ const GravitySimulator = () => {
       <Box
         sx={{
           position: "absolute",
-          top: 20,
+          top: 70,
           left: 20,
           color: "white",
           background: "rgba(0, 0, 0, 0.7)",
           padding: "10px 15px",
           borderRadius: "8px",
           fontSize: "14px",
+          opacity: uiOpacity,
+          transition: "opacity 0.3s ease",
         }}
       >
         <Typography variant="body2">Bodies: {bodyCount}</Typography>
@@ -825,7 +833,12 @@ const GravitySimulator = () => {
           minWidth: "40px",
           borderRadius: "50%",
           fontSize: "18px",
-          "&:hover": { backgroundColor: "#555" },
+          opacity: uiOpacity,
+          transition: "opacity 0.3s ease",
+          "&:hover": {
+            backgroundColor: "#555",
+            opacity: 1,
+          },
         }}
       >
         ⚙️
@@ -844,6 +857,11 @@ const GravitySimulator = () => {
             minWidth: "280px",
             maxHeight: "80vh",
             overflowY: "auto",
+            opacity: uiOpacity,
+            transition: "opacity 0.3s ease",
+            "&:hover": {
+              opacity: 1,
+            },
           }}
         >
           <Stack spacing={2}>

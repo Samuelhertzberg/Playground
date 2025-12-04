@@ -1,16 +1,14 @@
 import { Box, ImageList, ImageListItem, ImageListItemBar, Typography } from "@mui/material";
 import React from "react";
 import { Project } from "../types";
+import { Link } from "react-router-dom";
 import './gallery.css';
 
 type Props = {
   projects: Project[];
-  onClickProject: (id: string) => void;
 };
 
-type GalleryCardProps = Project & {
-  onClick: () => void;
-};
+type GalleryCardProps = Project;
 
 const getSizeProps = (importance: number) => {
   switch (importance) {
@@ -37,25 +35,28 @@ const getSizeProps = (importance: number) => {
   }
 };
 
-const GalleryCard: React.FC<Project & { onClick: () => void }> = ({
+const GalleryCard: React.FC<GalleryCardProps> = ({
   id,
   title,
   description,
   importance,
-  onClick,
-}: GalleryCardProps) => {
+  route,
+}) => {
   const [isHovered, setIsHovered] = React.useState(false);
   const listItemProps = getSizeProps(importance);
 
   return (
     <ImageListItem
       {...listItemProps}
-      onClick={onClick}
+      component={Link}
+      to={route}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       sx={{
         cursor: "pointer",
         border: "1px solid white",
+        textDecoration: "none",
+        color: "inherit",
       }}
     >
       <img
@@ -76,24 +77,23 @@ const GalleryCard: React.FC<Project & { onClick: () => void }> = ({
   );
 };
 
-const Gallery: React.FC<Props> = ({ projects, onClickProject }) => {
+const Gallery: React.FC<Props> = ({ projects }) => {
   return (
     <Box
       sx={{
-        height: "100%",
-        width: "100%",
+        height: "100vh",
+        width: "100vw",
+        overflow: "auto",
+        padding: 2,
       }}
     >
-      <Typography variant="h3">Goofy Projects...</Typography>
+      <Typography variant="h3" sx={{ mb: 2 }}>Goofy Projects...</Typography>
       <ImageList
-        cols={4}  
+        cols={4}
         gap={10}
-        sx={{
-          padding: 2
-        }}
       >
         {projects.map((project, i) => (
-          <GalleryCard key={i} {...project} onClick={() => onClickProject(project.id)} />
+          <GalleryCard key={i} {...project} />
         ))}
       </ImageList>
     </Box>

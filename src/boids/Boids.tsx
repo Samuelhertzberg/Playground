@@ -2,6 +2,8 @@ import { P5CanvasInstance, ReactP5Wrapper, Sketch } from "@p5-wrapper/react";
 import p5, { Vector } from "p5";
 import { useState } from "react";
 import { Box, Button, Paper, Slider, Stack, Typography } from "@mui/material";
+import BackButton from "../components/BackButton";
+import useMouseActivity from "../hooks/useMouseActivity";
 
 const flockSize = 200;
 
@@ -240,8 +242,12 @@ const Boids = () => {
   const [cohesion, setCohesion] = useState(0.6);
   const [separation, setSeparation] = useState(0.4);
 
+  const { opacity: uiOpacity } = useMouseActivity(3000, 0);
+
   return (
     <Box sx={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
+      <BackButton />
+
       <ReactP5Wrapper
         sketch={sketch}
         alignment={alignment}
@@ -263,7 +269,12 @@ const Boids = () => {
           minWidth: "40px",
           borderRadius: "50%",
           fontSize: "18px",
-          "&:hover": { backgroundColor: "#555" },
+          opacity: uiOpacity,
+          transition: "opacity 0.3s ease",
+          "&:hover": {
+            backgroundColor: "#555",
+            opacity: 1,
+          },
           zIndex: 1000,
         }}
       >
@@ -283,6 +294,11 @@ const Boids = () => {
             minWidth: "280px",
             maxHeight: "80vh",
             overflowY: "auto",
+            opacity: uiOpacity,
+            transition: "opacity 0.3s ease",
+            "&:hover": {
+              opacity: 1,
+            },
             zIndex: 1000,
           }}
         >

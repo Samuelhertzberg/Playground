@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Button, Paper, Stack, Typography } from "@mui/material";
+import BackButton from "../components/BackButton";
+import useMouseActivity from "../hooks/useMouseActivity";
 
 // Grid parameters
 const GRID_SIZE = 20;
@@ -11,6 +13,8 @@ const Propagation = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [currentMode, setCurrentMode] = useState(0);
+
+  const { opacity: uiOpacity } = useMouseActivity(3000, 0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -567,6 +571,8 @@ const Propagation = () => {
 
   return (
     <Box sx={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
+      <BackButton />
+
       <canvas
         ref={canvasRef}
         style={{
@@ -589,7 +595,12 @@ const Propagation = () => {
           minWidth: "40px",
           borderRadius: "50%",
           fontSize: "18px",
-          "&:hover": { backgroundColor: "#555" },
+          opacity: uiOpacity,
+          transition: "opacity 0.3s ease",
+          "&:hover": {
+            backgroundColor: "#555",
+            opacity: 1,
+          },
           zIndex: 1000,
         }}
       >
@@ -609,6 +620,11 @@ const Propagation = () => {
             minWidth: "280px",
             maxHeight: "80vh",
             overflowY: "auto",
+            opacity: uiOpacity,
+            transition: "opacity 0.3s ease",
+            "&:hover": {
+              opacity: 1,
+            },
             zIndex: 1000,
           }}
         >

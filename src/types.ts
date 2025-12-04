@@ -3,6 +3,7 @@ type Project = {
     title: string;
     description: string;
     importance: number;
+    route: string;
 };
 
 export type { Project };

@@ -11,6 +11,8 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import BackButton from "../components/BackButton";
+import useMouseActivity from "../hooks/useMouseActivity";
 
 const TWO_PI = 2 * Math.PI;
 const NUM_CONTROL_POINTS = 10;
@@ -49,6 +51,8 @@ const Harmonics = () => {
   const [fadeTrails, setFadeTrails] = useState(false);
   const [colorCycling, setColorCycling] = useState(false);
   const [cyclingSpeed, setCyclingSpeed] = useState(83);
+
+  const { opacity: uiOpacity } = useMouseActivity(3000, 0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -802,13 +806,15 @@ const Harmonics = () => {
 
   return (
     <Box sx={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
+      <BackButton />
+
       <canvas ref={canvasRef} style={{ display: "block", backgroundColor: "#000" }} />
 
       {/* FPS Counter */}
       <Box
         sx={{
           position: "absolute",
-          top: 20,
+          top: 70,
           left: 20,
           backgroundColor: "rgba(0, 0, 0, 0.7)",
           color: "white",
@@ -816,6 +822,8 @@ const Harmonics = () => {
           borderRadius: "5px",
           fontFamily: "monospace",
           fontSize: "14px",
+          opacity: uiOpacity,
+          transition: "opacity 0.3s ease",
         }}
       >
         FPS: {fps}
@@ -835,7 +843,12 @@ const Harmonics = () => {
           minWidth: "40px",
           borderRadius: "50%",
           fontSize: "18px",
-          "&:hover": { backgroundColor: "#555" },
+          opacity: uiOpacity,
+          transition: "opacity 0.3s ease",
+          "&:hover": {
+            backgroundColor: "#555",
+            opacity: 1,
+          },
         }}
       >
         ⚙️
@@ -854,6 +867,11 @@ const Harmonics = () => {
             minWidth: "280px",
             maxHeight: "80vh",
             overflowY: "auto",
+            opacity: uiOpacity,
+            transition: "opacity 0.3s ease",
+            "&:hover": {
+              opacity: 1,
+            },
           }}
         >
           <Stack spacing={2}>
