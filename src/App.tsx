@@ -1,77 +1,62 @@
-import Gallery, { Project } from "./gallery/Gallery";
-import "./App.css";
-import { Box, ThemeProvider, createTheme } from "@mui/material";
-import GravitySimulator from "./gravitySimulator/GravitySimulator";
-import Boids from "./boids/Boids";
-import Propagation from "./propagation/Propagation";
-import Circuit from "./circuit/Circuit";
-import Stream from "./stream/Stream";
-import Harmonics from "./harmonics/Harmonics";
-import { HashRouter, Routes, Route } from "react-router-dom";
+const projectSlots = [
+  {
+    number: '01',
+    title: 'Visual experiments',
+    description: 'Interactive sketches and simulations will live here.',
+  },
+  {
+    number: '02',
+    title: 'Small tools',
+    description: 'Useful browser-sized ideas, built to be shared.',
+  },
+  {
+    number: '03',
+    title: 'Works in progress',
+    description: 'A place for unfinished thoughts worth keeping around.',
+  },
+]
 
-function App() {
-
-  const projects: Project[] = [
-    {
-      id: "gravitySimulator",
-      title: "Gravity Simulator",
-      description:
-        "Watch gravity do its thing and play around with the formation of star systems!",
-      importance: 3,
-      route: "/gravity-simulator",
-    },
-    {
-      id: "harmonics",
-      title: "Harmonics",
-      description:
-        "Mesmerizing harmonic oscillations with multiple visualization modes!",
-      importance: 3,
-      route: "/harmonics",
-    },
-    {
-      id: "boids",
-      title: "Boids",
-      description:
-        "These boids look oddly repulsive. Click if you like worms I guess.",
-      importance: 2,
-      route: "/boids",
-    },
-    {
-      id: "propagation",
-      title: "Propagation",
-      description: "Create beautiful wave patterns with your cursor!",
-      importance: 2,
-      route: "/propagation",
-    },
-  ];
-
-  const darkTheme = createTheme({
-    palette: {
-      mode: "dark",
-    },
-  });
-
+export function App() {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <HashRouter>
-        <Box sx={{
-          width: "100vw",
-          height: "100vh",
-          overflow: "hidden",
-        }}>
-          <Routes>
-            <Route path="/" element={<Gallery projects={projects} />} />
-            <Route path="/gravity-simulator" element={<GravitySimulator />} />
-            <Route path="/harmonics" element={<Harmonics />} />
-            <Route path="/boids" element={<Boids />} />
-            <Route path="/propagation" element={<Propagation />} />
-            <Route path="/circuit" element={<Circuit />} />
-            <Route path="/stream" element={<Stream />} />
-          </Routes>
-        </Box>
-      </HashRouter>
-    </ThemeProvider>
-  );
-}
+    <main>
+      <header className="site-header">
+        <a className="wordmark" href="/" aria-label="Web Gallery home">
+          SH<span aria-hidden="true">↗</span>
+        </a>
+        <p>Web Gallery</p>
+      </header>
 
-export default App;
+      <section className="hero" aria-labelledby="page-title">
+        <p className="eyebrow">Samuel Hertzberg · Experiments for the browser</p>
+        <h1 id="page-title">
+          A clean space for
+          <span> curious things.</span>
+        </h1>
+        <p className="intro">
+          The new gallery foundation is ready. Projects will return one at a
+          time as they are revisited, refined, and made worth sharing again.
+        </p>
+      </section>
+
+      <section className="project-grid" aria-label="Gallery sections">
+        {projectSlots.map((project) => (
+          <article className="project-card" key={project.number}>
+            <div className="card-meta">
+              <span>{project.number}</span>
+              <span>Coming soon</span>
+            </div>
+            <div>
+              <h2>{project.title}</h2>
+              <p>{project.description}</p>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <footer>
+        <p>Built quietly. Released when ready.</p>
+        <p>{new Date().getFullYear()}</p>
+      </footer>
+    </main>
+  )
+}

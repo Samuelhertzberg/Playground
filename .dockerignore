@@ -1,0 +1,10 @@
+.git
+.github
+.context
+.conductor
+legacy
+node_modules
+dist
+*.log
+.env*
+.DS_Store
