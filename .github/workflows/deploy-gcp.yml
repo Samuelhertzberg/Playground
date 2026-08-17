@@ -1,0 +1,84 @@
+name: Deploy to GCP
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['master']
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig*.json'
+      - 'vite.config.ts'
+      - 'eslint.config.js'
+      - 'Dockerfile'
+      - 'nginx.conf'
+      - '.dockerignore'
+      - '.github/workflows/deploy-gcp.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-gcp
+  cancel-in-progress: true
+
+env:
+  GCP_PROJECT: web-gallery-505811
+  GCP_REGION: europe-west1
+  AR_REPO: app
+  SERVICE: app
+  RUNTIME_SA: app-runner@web-gallery-505811.iam.gserviceaccount.com
+  DEPLOYER_SA: deployer@web-gallery-505811.iam.gserviceaccount.com
+  WIF_PROVIDER: projects/453048754658/locations/global/workloadIdentityPools/github-actions/providers/github-provider
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
+
+      - name: Build and push image
+        env:
+          IMAGE: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/${{ env.SERVICE }}:${{ github.sha }}
+        run: |
+          docker build -t "${IMAGE}" .
+          docker push "${IMAGE}"
+
+      - name: Deploy to Cloud Run
+        env:
+          IMAGE: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/${{ env.SERVICE }}:${{ github.sha }}
+        run: |
+          gcloud run deploy "${SERVICE}" \
+            --project "${GCP_PROJECT}" \
+            --image "${IMAGE}" \
+            --region "${GCP_REGION}" \
+            --platform managed \
+            --service-account "${RUNTIME_SA}" \
+            --allow-unauthenticated \
+            --min-instances 0 \
+            --max-instances 3 \
+            --memory 256Mi \
+            --cpu 1 \
+            --port 8080 \
+            --quiet
+
+      - name: Show service URL
+        run: |
+          gcloud run services describe "${SERVICE}" \
+            --project "${GCP_PROJECT}" \
+            --region "${GCP_REGION}" \
+            --format='value(status.url)'
