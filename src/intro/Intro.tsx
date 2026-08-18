@@ -20,10 +20,17 @@ export function Intro({ onComplete }: IntroProps) {
       if (!event.isPrimary) return
       if (event.pointerType === 'mouse' && event.button !== 0) return
 
+      engine?.setPointer(event.clientX, event.clientY)
       engine?.advance(event.clientX, event.clientY)
     }
 
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!event.isPrimary) return
+      engine?.setPointer(event.clientX, event.clientY)
+    }
+
     canvas.addEventListener('pointerdown', handlePointerDown)
+    canvas.addEventListener('pointermove', handlePointerMove)
 
     void document.fonts
       .load('400 20px "Jersey 10"')
@@ -35,6 +42,7 @@ export function Intro({ onComplete }: IntroProps) {
     return () => {
       cancelled = true
       canvas.removeEventListener('pointerdown', handlePointerDown)
+      canvas.removeEventListener('pointermove', handlePointerMove)
       engine?.destroy()
     }
   }, [onComplete])
