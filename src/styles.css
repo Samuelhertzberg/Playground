@@ -1,4 +1,7 @@
 :root {
+  --screen-blue: #0000aa;
+  --screen-white: #fff;
+  --gallery-menu-height: 4rem;
   color: #fff;
   background: #0000aa;
   font-family:
@@ -25,13 +28,20 @@ body,
 }
 
 .intro-screen,
-.gallery-screen {
+.gallery-screen,
+.project-placeholder-screen,
+.mobile-gate-screen {
   width: 100vw;
   height: 100vh;
   height: 100dvh;
   margin: 0;
-  overflow: hidden;
   background: #0000aa;
+}
+
+.intro-screen,
+.project-placeholder-screen,
+.mobile-gate-screen {
+  overflow: hidden;
 }
 
 .intro-canvas {
@@ -40,4 +50,295 @@ body,
   height: 100%;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+.gallery-screen {
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: var(--screen-white);
+  scrollbar-color: var(--screen-white) var(--screen-blue);
+  scrollbar-width: thin;
+}
+
+.gallery-screen::-webkit-scrollbar {
+  width: 8px;
+}
+
+.gallery-screen::-webkit-scrollbar-track {
+  background: var(--screen-blue);
+}
+
+.gallery-screen::-webkit-scrollbar-thumb {
+  border: 2px solid var(--screen-blue);
+  background: var(--screen-white);
+}
+
+.gallery-menu {
+  position: fixed;
+  z-index: 10;
+  top: 0;
+  left: 0;
+  display: flex;
+  width: 100%;
+  height: var(--gallery-menu-height);
+  align-items: center;
+  padding: 0 clamp(1.25rem, 3.5vw, 4.5rem);
+  border-bottom: 1px solid rgb(255 255 255 / 32%);
+  background: var(--screen-blue);
+}
+
+.gallery-menu-list {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(0.75rem, 2.5vw, 3rem);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.gallery-menu-link {
+  position: relative;
+  display: inline-block;
+  padding: 0.5rem 0;
+  color: rgb(255 255 255 / 54%);
+  font-size: clamp(0.68rem, 1vw, 0.86rem);
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 160ms ease;
+}
+
+.gallery-menu-link::after {
+  position: absolute;
+  right: 0;
+  bottom: 0.18rem;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  content: '';
+  opacity: 0;
+  transform: scaleX(0.4);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.gallery-menu-link:hover,
+.gallery-menu-link:focus-visible,
+.gallery-menu-link[aria-current='location'] {
+  color: var(--screen-white);
+}
+
+.gallery-menu-link:focus-visible {
+  outline: 1px solid var(--screen-white);
+  outline-offset: 0.35rem;
+}
+
+.gallery-menu-link[aria-current='location']::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.gallery-projects {
+  padding-top: var(--gallery-menu-height);
+}
+
+.gallery-project {
+  min-height: calc(100vh - var(--gallery-menu-height));
+  min-height: calc(100dvh - var(--gallery-menu-height));
+  scroll-margin-top: var(--gallery-menu-height);
+}
+
+.gallery-project + .gallery-project {
+  border-top: 1px solid rgb(255 255 255 / 13%);
+}
+
+.gallery-project-card {
+  display: grid;
+  min-height: inherit;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  color: inherit;
+  text-decoration: none;
+}
+
+.gallery-project-card:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--screen-white);
+}
+
+.gallery-artwork,
+.gallery-project-copy {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-artwork {
+  padding: clamp(2.5rem, 6vw, 7rem);
+  opacity: 0.62;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.gallery-project-copy {
+  align-items: flex-start;
+  flex-direction: column;
+  padding: clamp(2.5rem, 7vw, 8rem);
+  transition: transform 220ms ease;
+}
+
+.gallery-project--reversed .gallery-artwork {
+  order: 2;
+}
+
+.gallery-project--reversed .gallery-project-copy {
+  order: 1;
+}
+
+.gallery-project-card:hover .gallery-artwork,
+.gallery-project-card:focus-visible .gallery-artwork {
+  opacity: 1;
+  transform: translateY(-0.35rem);
+}
+
+.gallery-project-card:hover .gallery-project-copy,
+.gallery-project-card:focus-visible .gallery-project-copy {
+  transform: translateX(0.35rem);
+}
+
+.gallery-project--reversed .gallery-project-card:hover .gallery-project-copy,
+.gallery-project--reversed .gallery-project-card:focus-visible .gallery-project-copy {
+  transform: translateX(-0.35rem);
+}
+
+.gallery-project-index {
+  margin-bottom: clamp(1rem, 2.5vh, 2rem);
+  color: rgb(255 255 255 / 62%);
+  font-size: clamp(0.7rem, 0.9vw, 0.86rem);
+  letter-spacing: 0.12em;
+}
+
+.gallery-project-copy h2 {
+  max-width: 10ch;
+  margin: 0;
+  font-size: clamp(2.8rem, 5.25vw, 6.75rem);
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  line-height: 0.88;
+  overflow-wrap: normal;
+  text-transform: uppercase;
+}
+
+.gallery-project-copy p {
+  max-width: 35ch;
+  margin: clamp(1.25rem, 3.5vh, 2.75rem) 0 0;
+  color: rgb(255 255 255 / 72%);
+  font-size: clamp(0.82rem, 1.1vw, 1.05rem);
+  line-height: 1.55;
+}
+
+.gallery-artwork-svg {
+  display: block;
+  width: min(100%, 34rem);
+  height: auto;
+  overflow: visible;
+}
+
+.art-stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.art-fill {
+  fill: currentColor;
+}
+
+.art-faint {
+  opacity: 0.3;
+}
+
+.art-medium {
+  opacity: 0.58;
+}
+
+.art-strong {
+  opacity: 0.94;
+}
+
+.gallery-artwork-ascii {
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  font-size: clamp(1rem, 2.4vw, 2.8rem);
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-align: left;
+  white-space: pre;
+}
+
+.project-placeholder-screen {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--screen-white);
+}
+
+.project-placeholder-screen p {
+  margin: 0;
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+}
+
+.project-placeholder-back {
+  position: absolute;
+  top: clamp(1.25rem, 3vw, 3rem);
+  left: clamp(1.25rem, 3vw, 3rem);
+  padding: 0.4rem 0;
+  color: rgb(255 255 255 / 68%);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 160ms ease;
+}
+
+.project-placeholder-back:hover,
+.project-placeholder-back:focus-visible {
+  color: var(--screen-white);
+}
+
+.project-placeholder-back:focus-visible {
+  outline: 1px solid var(--screen-white);
+  outline-offset: 0.35rem;
+}
+
+.mobile-gate-screen {
+  position: relative;
+  color: var(--screen-white);
+  text-align: center;
+}
+
+.mobile-grid-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-menu-link,
+  .gallery-menu-link::after,
+  .gallery-artwork,
+  .gallery-project-copy,
+  .project-placeholder-back {
+    transition: none;
+  }
 }
